@@ -5,7 +5,7 @@
     "owner": "sanjeeee",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/SmartGuide.png",
     "scheme": "smartcane",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -16,14 +16,14 @@
       "package": "com.anonymous.smartcane",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/SmartGuide.png",
+        "backgroundImage": "./assets/images/SmartGuide.png",
+        "monochromeImage": "./assets/images/SmartGuide.png"
       }
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/SmartGuide.png"
     },
     "plugins": [
       "expo-router",
@@ -31,7 +31,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/SmartGuide.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
@@ -40,7 +40,8 @@
           }
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -48,10 +49,12 @@
     },
     "extra": {
       "router": {},
+      "googleWebClientId": "184755804059-tna0gg12b8ufkod95vfeqllbqfaqtdm3.apps.googleusercontent.com",
+      "googleIosClientId": "",
+      "googleAndroidClientId": "",
       "eas": {
         "projectId": "ebba98e7-76a1-42bd-a627-23ae7008ce0e"
       }
     }
   }
-  
 }
