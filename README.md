@@ -90,7 +90,6 @@ SmartCane/
 
 ## Future Improvements
 
-- AI-powered obstacle classification
 - Offline navigation support
 - Battery health monitoring
 - Voice command integration
