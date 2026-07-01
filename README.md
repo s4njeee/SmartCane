@@ -1,50 +1,105 @@
-# Welcome to your Expo app 👋
+# 🦯 SmartCane
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+SmartCane is a capstone project that aims to enhance the safety, mobility, and independence of visually impaired individuals through a smart assistive walking cane integrated with a mobile application. The system utilizes obstacle detection, GPS tracking, voice alerts, and emergency communication to provide real-time assistance and improve navigation.
 
-## Get started
+## Project Purpose
 
-1. Install dependencies
+The purpose of SmartCane is to develop an affordable and intelligent assistive solution that helps visually impaired users navigate their surroundings safely while allowing guardians to monitor their location during emergencies.
 
-   ```bash
-   npm install
-   ```
+## Features
 
-2. Start the app
+- 🔊 Real-time voice alerts for obstacle detection
+- 📍 GPS location tracking
+- 🚨 Emergency SOS button
+- 👨‍👩‍👧 Guardian monitoring
+- 🔔 Push notifications
+- ☁️ Cloud-based data synchronization using Supabase
+- 🔐 Secure user authentication
+- 📱 User-friendly mobile application
 
-   ```bash
-   npx expo start
-   ```
+## Built With
 
-In the output, you'll find options to open the app in a
+- React Native
+- Expo
+- Expo Router
+- TypeScript
+- Supabase
+- ESP32
+- Ultrasonic Sensor
+- GPS Module
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Installation
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### Clone the repository
 
 ```bash
-npm run reset-project
+git clone https://github.com/your-username/SmartCane.git
+cd SmartCane
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Install dependencies
 
-## Learn more
+```bash
+npm install
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+### Configure environment variables
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Create a `.env` file in the project root.
 
-## Join the community
+```env
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-Join our community of developers creating universal apps.
+### Start the application
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npx expo start
+```
+
+Run the application using:
+
+- Expo Go
+- Android Emulator
+- Physical Android Device
+
+## Project Structure
+
+```
+SmartCane/
+├── app/
+├── assets/
+├── components/
+├── hooks/
+├── services/
+├── utils/
+├── constants/
+├── types/
+└── README.md
+```
+
+## Usage
+
+1. Launch the SmartCane mobile application.
+2. Sign in or create an account.
+3. Pair the SmartCane device with the application.
+4. Receive voice alerts when obstacles are detected.
+5. Monitor the user's live location through GPS.
+6. Use the SOS feature during emergencies to notify guardians.
+
+## Future Improvements
+
+- AI-powered obstacle classification
+- Offline navigation support
+- Battery health monitoring
+- Voice command integration
+- Fall detection
+
+## Developers
+
+This project was developed as a Capstone Project by students taking the Bachelor of Industrial Technology program.
+
+## License
+
+This project is intended for academic purposes only.
