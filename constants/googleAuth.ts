@@ -1,5 +1,6 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as AuthSession from 'expo-auth-session';
+import { Platform } from 'react-native';
 import { googleWebClientId as firebaseGoogleClientId } from './googleOAuth';
 
 type GoogleAuthExtra = {
@@ -26,15 +27,11 @@ export function getStaticGoogleWebClientId(): string {
   );
 }
 
-/** HTTPS redirect required for Expo Go — Google rejects exp:// URIs on Web OAuth clients. */
+/** HTTPS redirect for Web OAuth clients. Never use a custom scheme with a Web client ID. */
 export function getExpoProxyRedirectUri(): string {
-  try {
-    return AuthSession.getRedirectUrl();
-  } catch {
-    const owner = Constants.expoConfig?.owner ?? 'sanjeeee';
-    const slug = Constants.expoConfig?.slug ?? 'smartcane';
-    return `https://auth.expo.io/@${owner}/${slug}`;
-  }
+  const owner = Constants.expoConfig?.owner ?? 'sanjeeee';
+  const slug = Constants.expoConfig?.slug ?? 'smartcane';
+  return `https://auth.expo.io/@${owner}/${slug}`;
 }
 
 export function getNativeRedirectUri(): string {
@@ -50,8 +47,16 @@ export function getNativeRedirectUri(): string {
   });
 }
 
+export function hasNativeGoogleClientId(): boolean {
+  const iosClientId = extra.googleIosClientId?.trim() ?? '';
+  const androidClientId = extra.googleAndroidClientId?.trim() ?? '';
+  if (Platform.OS === 'ios') return iosClientId.length > 0;
+  if (Platform.OS === 'android') return androidClientId.length > 0;
+  return true;
+}
+
 export function getGoogleRedirectUri(): string {
-  if (isExpoGo()) {
+  if (isExpoGo() || !hasNativeGoogleClientId()) {
     return getExpoProxyRedirectUri();
   }
   return getNativeRedirectUri();
@@ -59,21 +64,21 @@ export function getGoogleRedirectUri(): string {
 
 /** All redirect URIs to register in Google Cloud OAuth credentials. */
 export function getGoogleRedirectUrisForSetup(): string[] {
-  return [...new Set([getExpoProxyRedirectUri(), getNativeRedirectUri()])];
+  return [getExpoProxyRedirectUri()];
 }
 
 export function buildGoogleClientConfig(webClientId: string) {
-  const expoGo = isExpoGo();
-  const iosClientId = extra.googleIosClientId?.trim() || webClientId;
-  const androidClientId = extra.googleAndroidClientId?.trim() || webClientId;
+  const useExpoProxy = isExpoGo() || !hasNativeGoogleClientId();
+  const iosClientId = extra.googleIosClientId?.trim() || '';
+  const androidClientId = extra.googleAndroidClientId?.trim() || '';
 
   return {
     webClientId,
-    iosClientId: expoGo ? webClientId : iosClientId,
-    androidClientId: expoGo ? webClientId : androidClientId,
+    iosClientId,
+    androidClientId,
     redirectUri: getGoogleRedirectUri(),
-    useExpoProxy: expoGo,
-    useIdTokenFlow: expoGo,
+    useExpoProxy,
+    useIdTokenFlow: useExpoProxy,
   };
 }
 

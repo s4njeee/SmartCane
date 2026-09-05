@@ -66,7 +66,7 @@ export default function GoogleSetupModal({ visible, onClose, onSaved }: Props) {
             2. Copy the Web client ID
           </Text>
           <Text style={[styles.step, { color: colors.textSecondary }]}>
-            3. In Google Cloud OAuth, add these redirect URIs:{'\n'}
+            3. In Google Cloud, edit the Web client and add this Authorized redirect URI:{'\n'}
             {getGoogleRedirectUrisForSetup().map((uri) => (
               <Text key={uri} style={{ color: colors.primary }}>
                 {uri}

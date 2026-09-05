@@ -30,6 +30,7 @@ import {
   notifyEmergency,
   requestEmergencyNotificationPermission,
 } from '../utils/emergencyNotifications';
+import { formatBarangayCity } from '../utils/geoPlace';
 
 const GEOCODE_INTERVAL_MS = 60000;
 const ROUTE_SAVE_DEBOUNCE_MS = 8000;
@@ -45,6 +46,7 @@ type CaneStatusContextValue = {
   selectedCane: CaneItem | null;
   setSelectedCane: (cane: CaneItem | null) => void;
   location: Location.LocationObjectCoords | null;
+  caneAddress: string;
   phoneLocation: LatLng | null;
   phoneTrail: LatLng[];
   isStatusOpen: boolean;
@@ -207,7 +209,8 @@ export function CaneStatusProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const lastGeocodeAt = useRef(0);
-  const lastAddress = useRef('Locating...');
+  const lastAddress = useRef('');
+  const [caneAddress, setCaneAddress] = useState('');
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const obstacleAlerted = useRef<Set<string>>(new Set());
   const motionAlerted = useRef<Set<string>>(new Set());
@@ -354,7 +357,13 @@ export function CaneStatusProvider({ children }: { children: React.ReactNode }) 
     queueCaneSync(canes);
   }, [canes, queueCaneSync, userId]);
 
-  // Reverse-geocode the cane GPS for a readable address.
+  // Reverse-geocode the cane GPS for barangay + city.
+  useEffect(() => {
+    lastGeocodeAt.current = 0;
+    lastAddress.current = '';
+    setCaneAddress('');
+  }, [selectedCane?.id]);
+
   useEffect(() => {
     const point = selectedCane?.routes[0];
     if (!point || !hasValidCoords(point.latitude, point.longitude)) return;
@@ -372,17 +381,18 @@ export function CaneStatusProvider({ children }: { children: React.ReactNode }) 
           longitude: point.longitude,
         });
         if (geocode.length > 0) {
-          const place = geocode[0];
-          lastAddress.current = [place.name, place.street, place.city, place.region]
-            .filter(Boolean)
-            .join(', ');
+          const label = formatBarangayCity(geocode[0]);
+          if (label) {
+            lastAddress.current = label;
+            setCaneAddress(label);
+          }
         }
         lastGeocodeAt.current = now;
       } catch {
         /* rate limit */
       }
     })();
-  }, [selectedCane?.routes]);
+  }, [selectedCane?.id, selectedCane?.routes]);
 
   // Track phone (CP) GPS for the red marker + path.
   useEffect(() => {
@@ -498,6 +508,7 @@ export function CaneStatusProvider({ children }: { children: React.ReactNode }) 
       selectedCane,
       setSelectedCane,
       location,
+      caneAddress,
       phoneLocation,
       phoneTrail,
       isStatusOpen,
@@ -511,6 +522,7 @@ export function CaneStatusProvider({ children }: { children: React.ReactNode }) 
       canes,
       selectedCane,
       location,
+      caneAddress,
       phoneLocation,
       phoneTrail,
       isStatusOpen,

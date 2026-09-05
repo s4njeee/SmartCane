@@ -12,6 +12,7 @@ import { useCaneStatus } from '../context/CaneStatusContext';
 import { useNavigation } from '../context/NavigationContext';
 import { useTheme } from '../context/ThemeContext';
 import { platformDesign } from '../constants/platformDesign';
+import { looksLikeCoordinates } from '../utils/geoPlace';
 import { mapBannerTop, tabBarClearance } from '../utils/layoutInsets';
 
 export default function HomeScreen() {
@@ -22,6 +23,7 @@ export default function HomeScreen() {
     phoneLocation,
     selectedCane,
     isStatusOpen,
+    caneAddress,
   } = useCaneStatus();
   const [mapRef, setMapRef] = useState<any>(null);
   const [bannerExpanded, setBannerExpanded] = useState(false);
@@ -36,6 +38,10 @@ export default function HomeScreen() {
   const hasMapTarget = Boolean(caneLocation || phoneLocation);
   const showStatusBanner =
     isHomeFocused && !isStatusOpen && !followDirection && !isNavigating;
+  const routeAddress = selectedCane?.routes[0]?.address;
+  const placeLabel =
+    caneAddress ||
+    (routeAddress && !looksLikeCoordinates(routeAddress) ? routeAddress : '');
 
   useFocusEffect(
     useCallback(() => {
@@ -88,11 +94,9 @@ export default function HomeScreen() {
                 expanded={bannerExpanded}
                 onToggle={() => setBannerExpanded((prev) => !prev)}
                 caneName={selectedCane?.username}
-                gpsLive={false}
                 deviceOnline={Boolean(selectedCane?.connected)}
                 battery={selectedCane?.battery}
-                obstacle={Boolean(selectedCane?.obstacle)}
-                motion={Boolean(selectedCane?.motion)}
+                address={placeLabel}
               />
             </View>
           )}
@@ -143,13 +147,9 @@ export default function HomeScreen() {
               expanded={bannerExpanded}
               onToggle={() => setBannerExpanded((prev) => !prev)}
               caneName={selectedCane?.username}
-              latitude={caneLocation?.latitude}
-              longitude={caneLocation?.longitude}
-              gpsLive={Boolean(selectedCane?.connected && selectedCane?.gps)}
               deviceOnline={Boolean(selectedCane?.connected)}
               battery={selectedCane?.battery}
-              obstacle={Boolean(selectedCane?.obstacle)}
-              motion={Boolean(selectedCane?.motion)}
+              address={placeLabel}
             />
           </View>
         )}
@@ -161,7 +161,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   bannerHost: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 20,
   },
   bannerHostAndroid: {

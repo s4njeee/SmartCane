@@ -33,9 +33,14 @@ export function useGoogleSignIn() {
 
   const [request, , promptAsync] = Google.useAuthRequest(
     {
+      clientId: configured ? config!.webClientId : PLACEHOLDER_CLIENT_ID,
       webClientId: configured ? config!.webClientId : PLACEHOLDER_CLIENT_ID,
-      iosClientId: configured ? config!.iosClientId : PLACEHOLDER_CLIENT_ID,
-      androidClientId: configured ? config!.androidClientId : PLACEHOLDER_CLIENT_ID,
+      ...(configured && config!.iosClientId
+        ? { iosClientId: config!.iosClientId }
+        : {}),
+      ...(configured && config!.androidClientId
+        ? { androidClientId: config!.androidClientId }
+        : {}),
       redirectUri: configured ? config!.redirectUri : undefined,
       selectAccount: true,
       ...(configured && config!.useIdTokenFlow

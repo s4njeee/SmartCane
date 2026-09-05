@@ -5,7 +5,7 @@
     "owner": "sanjeeee",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/SmartGuide.png",
+    "icon": "./assets/images/app-icon.png",
     "scheme": "smartcane",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -17,19 +17,18 @@
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/SmartGuide.png",
-        "backgroundImage": "./assets/images/SmartGuide.png",
-        "monochromeImage": "./assets/images/SmartGuide.png"
+        "foregroundImage": "./assets/images/app-icon.png"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBkawM_qrgFgVifZu9_B8O6YfqlXNsUbKk"
+        }
       }
     },
     "androidStatusBar": {
       "barStyle": "dark-content",
       "backgroundColor": "#00000000",
       "translucent": true
-    },
-    "androidNavigationBar": {
-      "backgroundColor": "#00000000",
-      "barStyle": "dark-content"
     },
     "web": {
       "output": "static",
@@ -38,6 +37,14 @@
     "plugins": [
       "expo-router",
       "expo-web-browser",
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false,
+          "hidden": false,
+          "style": "dark"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -61,7 +68,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/SmartGuide.png",
+          "icon": "./assets/images/app-icon.png",
           "color": "#DC2626",
           "sounds": []
         }
@@ -76,6 +83,7 @@
       "googleWebClientId": "184755804059-tna0gg12b8ufkod95vfeqllbqfaqtdm3.apps.googleusercontent.com",
       "googleIosClientId": "",
       "googleAndroidClientId": "",
+      "googleMapsApiKey": "",
       "eas": {
         "projectId": "ebba98e7-76a1-42bd-a627-23ae7008ce0e"
       }

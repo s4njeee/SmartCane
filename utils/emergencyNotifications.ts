@@ -9,28 +9,32 @@ let configured = false;
 export async function configureEmergencyNotifications() {
   if (Platform.OS === 'web' || configured) return;
 
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: 'Emergency Alerts',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      sound: 'default',
-      enableVibrate: true,
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
     });
-  }
 
-  configured = true;
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+        name: 'Emergency Alerts',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        sound: 'default',
+        enableVibrate: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+    }
+
+    configured = true;
+  } catch {
+    /* Standalone builds can throw if the native module is unavailable. */
+  }
 }
 
 export async function requestEmergencyNotificationPermission() {
@@ -70,8 +74,12 @@ export async function notifyEmergency(kind: EmergencyKind, caneName: string) {
 
 export function addEmergencyNotificationResponseListener(onOpenAlerts: () => void) {
   if (Platform.OS === 'web') return () => undefined;
-  const sub = Notifications.addNotificationResponseReceivedListener(() => {
-    onOpenAlerts();
-  });
-  return () => sub.remove();
+  try {
+    const sub = Notifications.addNotificationResponseReceivedListener(() => {
+      onOpenAlerts();
+    });
+    return () => sub.remove();
+  } catch {
+    return () => undefined;
+  }
 }

@@ -5,40 +5,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { mapBannerTop } from '../../utils/layoutInsets';
 
-const YOU_RED = '#EF4444';
 const ROUTE_BLUE = '#2563EB';
-const ROUTE_OUTLINE = '#1D4ED8';
+const FAB_SIZE = 48;
 
 type Props = {
   expanded: boolean;
   onToggle: () => void;
   caneName?: string;
-  latitude?: number;
-  longitude?: number;
-  gpsLive?: boolean;
   deviceOnline?: boolean;
   battery?: number;
-  obstacle?: boolean;
-  motion?: boolean;
+  address?: string;
 };
 
-type StatusLineProps = {
-  label: string;
-  value: string;
-  ok?: boolean;
-};
-
+/** Compact cane status — same card as the Go bar, pinned to the left. */
 export default function LiveTrackingBanner({
   expanded,
   onToggle,
   caneName,
-  latitude,
-  longitude,
-  gpsLive = false,
   deviceOnline = false,
   battery,
-  obstacle = false,
-  motion = false,
+  address,
 }: Props) {
   const { theme } = useTheme();
   const { colors } = theme;
@@ -46,131 +32,78 @@ export default function LiveTrackingBanner({
   const top = mapBannerTop(insets);
   const name = caneName || 'Cane';
 
-  const connectedValue = deviceOnline ? 'Online' : 'Offline';
   const batteryValue =
     deviceOnline && battery != null ? `${battery}%` : 'Offline';
-  const ultrasonicValue = !deviceOnline
-    ? 'Offline'
-    : obstacle
-      ? 'Detected'
-      : 'Active';
-  const motionValue = !deviceOnline
-    ? 'Offline'
-    : motion
-      ? 'Detected'
-      : 'Active';
-  const gpsValue = !deviceOnline ? 'Offline' : gpsLive ? 'Active' : 'No fix';
-  const locationValue = !deviceOnline
-    ? 'Offline'
-    : latitude != null && longitude != null
-      ? `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
-      : 'Locating…';
+  const locationValue = address?.trim()
+    ? address
+    : deviceOnline
+      ? 'Locating…'
+      : 'Offline';
 
-  const statusLines: StatusLineProps[] = [
-    { label: 'Connected', value: connectedValue, ok: deviceOnline },
-    {
-      label: 'Battery',
-      value: batteryValue,
-      ok: deviceOnline ? undefined : false,
-    },
-    {
-      label: 'Ultrasonic',
-      value: ultrasonicValue,
-      ok: deviceOnline ? !obstacle : false,
-    },
-    {
-      label: 'Motion',
-      value: motionValue,
-      ok: deviceOnline ? !motion : false,
-    },
-    { label: 'GPS', value: gpsValue, ok: deviceOnline && gpsLive },
-    {
-      label: 'Location',
-      value: locationValue,
-      ok: deviceOnline ? undefined : false,
-    },
-  ];
+  if (!expanded) {
+    return (
+      <View style={[styles.wrap, { top }]} pointerEvents="box-none">
+        <Pressable
+          onPress={onToggle}
+          android_ripple={{ color: colors.primary + '22' }}
+          accessibilityRole="button"
+          accessibilityLabel={`Show ${name} status`}
+          style={[
+            styles.fab,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Ionicons name="accessibility" size={22} color={ROUTE_BLUE} />
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.wrap, { top }]}>
-      <Pressable
-        onPress={onToggle}
-        android_ripple={{ color: colors.primary + '14' }}
-        accessibilityRole="button"
-        accessibilityState={{ expanded }}
-        accessibilityLabel={
-          expanded ? 'Hide cane status' : 'Show cane status'
-        }
+    <View style={[styles.wrap, { top }]} pointerEvents="box-none">
+      <View
         style={[
-          styles.card,
+          styles.bar,
           { backgroundColor: colors.surface, borderColor: colors.border },
         ]}
       >
-        <View style={styles.legendRow}>
-          <View style={styles.legendItem}>
-            <View style={styles.legendYou} />
-            <Text style={[styles.legendText, { color: colors.text }]}>You</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={styles.legendCane} />
-            <Text style={[styles.legendText, { color: colors.text }]} numberOfLines={1}>
+        <Pressable
+          onPress={onToggle}
+          android_ripple={{ color: colors.primary + '18' }}
+          accessibilityRole="button"
+          accessibilityLabel="Hide cane status"
+          style={styles.barPress}
+        >
+          <View style={styles.body}>
+            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
               {name}
             </Text>
-          </View>
-          <View style={styles.headerEnd}>
-            <View
+            <Text
               style={[
-                styles.chip,
-                {
-                  backgroundColor: deviceOnline
-                    ? colors.success + '18'
-                    : colors.danger + '18',
-                },
+                styles.meta,
+                { color: deviceOnline ? colors.primary : colors.danger },
               ]}
             >
-              <Text
-                style={[
-                  styles.chipText,
-                  { color: deviceOnline ? colors.success : colors.danger },
-                ]}
-              >
-                {deviceOnline ? 'Online' : 'Offline'}
-              </Text>
-            </View>
-            <Ionicons
-              name={expanded ? 'chevron-up' : 'chevron-down'}
-              size={16}
-              color={colors.textMuted}
-            />
+              {batteryValue}
+            </Text>
+            <Text style={[styles.sub, { color: colors.textMuted }]} numberOfLines={2}>
+              {locationValue}
+            </Text>
           </View>
-        </View>
-
-        {expanded && (
-          <View style={[styles.statusBlock, { borderTopColor: colors.border }]}>
-            {statusLines.map((line) => {
-              const valueColor =
-                line.ok === undefined
-                  ? colors.text
-                  : line.ok
-                    ? colors.success
-                    : colors.danger;
-              return (
-                <View key={line.label} style={styles.statusLine}>
-                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>
-                    {line.label}
-                  </Text>
-                  <Text
-                    style={[styles.statusValue, { color: valueColor }]}
-                    numberOfLines={1}
-                  >
-                    {line.value}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </Pressable>
+        </Pressable>
+        <Pressable
+          onPress={onToggle}
+          android_ripple={{ color: colors.textMuted + '33' }}
+          style={[styles.closeBtn, { backgroundColor: colors.cardAlt }]}
+          hitSlop={8}
+          accessibilityLabel="Close"
+        >
+          <Ionicons name="chevron-up" size={18} color={colors.textSecondary} />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -178,65 +111,45 @@ export default function LiveTrackingBanner({
 const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
-    left: 16,
-    right: 16,
+    left: 12,
+    right: 72,
     zIndex: 70,
     elevation: 12,
+    alignItems: 'flex-start',
   },
-  card: {
-    alignSelf: 'stretch',
+  fab: {
+    width: FAB_SIZE,
+    height: FAB_SIZE,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 2,
     overflow: 'hidden',
   },
-  legendRow: {
+  bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-  },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
-  legendYou: {
-    width: 10,
-    height: 14,
-    borderRadius: 4,
-    backgroundColor: YOU_RED,
-  },
-  legendCane: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: ROUTE_BLUE,
-    borderWidth: 2,
-    borderColor: ROUTE_OUTLINE,
-  },
-  legendText: { fontSize: 12, fontWeight: '700' },
-  headerEnd: {
-    marginLeft: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
     gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    elevation: 3,
+    overflow: 'hidden',
   },
-  chip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  chipText: { fontSize: 11, fontWeight: '700' },
-  statusBlock: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    gap: 8,
-  },
-  statusLine: {
-    flexDirection: 'row',
+  barPress: { flexShrink: 1 },
+  body: { minWidth: 140, maxWidth: 220 },
+  title: { fontSize: 15, fontWeight: '700' },
+  meta: { fontSize: 14, fontWeight: '700', marginTop: 2 },
+  sub: { fontSize: 12, marginTop: 2 },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  statusLabel: { fontSize: 12, fontWeight: '600' },
-  statusValue: { fontSize: 12, fontWeight: '700', flexShrink: 1, textAlign: 'right' },
 });

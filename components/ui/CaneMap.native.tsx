@@ -18,6 +18,8 @@ import {
 } from "../../utils/osrmRoute";
 import DirectionsSheet from "./DirectionsSheet";
 import GlowPressable from "./GlowPressable";
+import OsmMapView from "./OsmMapView";
+import { shouldUseOsmMapFallback } from "../../utils/mapRuntime";
 
 type RoutePoint = {
   latitude: number;
@@ -112,6 +114,7 @@ export default function CaneMap({
   const ignoreMapPress = useRef(false);
   const roadPathRef = useRef<RoutePoint[]>([]);
   const [mapHeading, setMapHeading] = useState(0);
+  const useOsmMap = shouldUseOsmMapFallback();
 
   const [roadPath, setRoadPath] = useState<RoutePoint[]>(
     () => (savedRoutePoints.length > 2 ? savedRoutePoints : [])
@@ -194,6 +197,10 @@ export default function CaneMap({
     }
     openDirections();
   };
+
+  useEffect(() => {
+    if (useOsmMap) onMapRef(null);
+  }, [useOsmMap, onMapRef]);
 
   useEffect(() => {
     if (!showRoute) {
@@ -331,6 +338,20 @@ export default function CaneMap({
 
   return (
     <>
+      {useOsmMap ? (
+        <OsmMapView
+          center={focusPoint}
+          caneLocation={caneLocation}
+          phoneLocation={phoneLocation}
+          routePoints={showRoute && displayPath.length > 2 ? displayPath : []}
+          mapType={mapType}
+          onMapPress={() => {
+            if (directionsOpen && !isNavigating) closeDirections();
+            onMapPress?.();
+          }}
+          onCanePress={openCaneDirections}
+        />
+      ) : (
       <MapView
         ref={(ref) => {
           mapRef.current = ref;
@@ -471,6 +492,7 @@ export default function CaneMap({
           </Marker>
         )}
       </MapView>
+      )}
 
       <DirectionsSheet
         bothReady={bothReady}
