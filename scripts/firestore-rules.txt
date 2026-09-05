@@ -1,0 +1,29 @@
+// Paste into Firebase Console → Firestore → Rules
+// Then click Publish.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /canes/{caneId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    match /alerts/{alertId} {
+      allow read: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // Smart cane hardware telemetry (ESP32 + app)
+    match /devices/{deviceId} {
+      allow read, write: if true;
+    }
+  }
+}

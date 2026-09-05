@@ -1,0 +1,17 @@
+{
+  "devices": {
+    "SC001": {
+      "deviceId": "SC001",
+      "caneID": "SC001",
+      "connected": true,
+      "gps": false,
+      "obstacle": false,
+      "motion": false,
+      "fall": false,
+      "sos": false,
+      "latitude": 0,
+      "longitude": 0,
+      "updatedAt": 0
+    }
+  }
+}
