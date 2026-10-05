@@ -12,6 +12,8 @@ type Props = {
   withNav?: boolean;
   style?: ViewStyle;
   contentStyle?: ViewStyle;
+  /** Extra DOM class on the inner content wrapper (web CSS in styles/index.css). */
+  contentClassName?: string;
 };
 
 /** Flat screen shell — same padding and safe-area on Android and iOS. */
@@ -22,6 +24,7 @@ export default function ScreenLayout({
   withNav = false,
   style,
   contentStyle,
+  contentClassName,
 }: Props) {
   const { theme } = useTheme();
   const { colors } = theme;
@@ -33,7 +36,7 @@ export default function ScreenLayout({
   const content = (
     <View
       {...uiWeb(
-        cx(padded && 'screen-padded'),
+        cx(padded && 'screen-padded', contentClassName),
         [bottomPad, contentStyle],
         [padded && styles.padded, bottomPad, contentStyle],
       )}
@@ -64,7 +67,7 @@ export default function ScreenLayout({
           >
             <View
               {...uiWeb(
-                cx(padded && 'screen-padded'),
+                cx(padded && 'screen-padded', contentClassName),
                 contentStyle,
                 [padded && styles.padded, contentStyle],
               )}

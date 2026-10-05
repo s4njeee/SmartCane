@@ -201,14 +201,16 @@ async function locateCssLine(entry) {
   const prop = entry?.prop || entry?.key || loc?.prop || '';
   const theme = entry?.theme || loc?.theme || 'light';
   const color = entry?.color || entry?.value || loc?.color || '';
-  const token = entry?.token != null ? entry.token : loc?.token || '1';
+  const token = entry?.token != null ? entry.token : loc?.token;
   const base = getDevServerUrl();
   let qs = `file=${encodeURIComponent(file)}`;
   if (symbol) qs += `&symbol=${encodeURIComponent(symbol)}`;
   if (prop) qs += `&prop=${encodeURIComponent(prop)}`;
   if (theme) qs += `&theme=${encodeURIComponent(theme)}`;
   if (color) qs += `&color=${encodeURIComponent(color)}`;
-  if (token) qs += `&token=${encodeURIComponent(String(token))}`;
+  if (token != null && token !== false && token !== '0') {
+    qs += `&token=${encodeURIComponent(String(token))}`;
+  }
   try {
     const res = await fetch(`${base}__insp/locate?${qs}`);
     if (!res.ok) return null;
@@ -221,7 +223,9 @@ async function locateCssLine(entry) {
     if (prop) params.set('prop', prop);
     params.set('theme', theme);
     if (color) params.set('color', color);
-    params.set('token', String(token));
+    if (token != null && token !== false && token !== '0') {
+      params.set('token', String(token));
+    }
     return {
       ...entry,
       src: `${file}:${line}:${column}?${params.toString()}`,
@@ -269,9 +273,10 @@ async function enrichDescriptionColors(description) {
   if (!description) return description;
   const colors = description.colorEntries || description.colors || [];
   const texts = description.textEntries || [];
+  const sizes = description.sizeEntries || [];
   const enrichedColors = colors.length
     ? await Promise.all(
-        colors.map(async (c) => (await locateCssLine(c)) || {
+        colors.map(async (c) => (await locateCssLine({ ...c, token: c.token !== false })) || {
           ...c,
           srcLabel: c.srcLabel && c.srcLabel !== 'colors' && c.srcLabel !== 'color' ? c.srcLabel : (c.role || shortFileLabel(c.src)),
         }),
@@ -282,6 +287,11 @@ async function enrichDescriptionColors(description) {
         texts.map(async (t) => (await locateTextLine(t)) || t),
       )
     : texts;
+  const enrichedSizes = sizes.length
+    ? await Promise.all(
+        sizes.map(async (s) => (await locateCssLine({ ...s, token: false })) || s),
+      )
+    : sizes;
   const textColorEntries = enrichedColors.filter((c) => c.isTextColor);
   return {
     ...description,
@@ -289,6 +299,7 @@ async function enrichDescriptionColors(description) {
     colors: enrichedColors,
     textColorEntries,
     textEntries: enrichedTexts,
+    sizeEntries: enrichedSizes,
   };
 }
 
@@ -296,6 +307,13 @@ function colorRowLabel(entry) {
   const role = entry?.role || entry?.key || 'color';
   const file = entry?.srcLabel;
   if (!file || file === 'colors' || file === 'color' || file === role) return role;
+  return `${role} · ${file}`;
+}
+
+function sizeRowLabel(entry) {
+  const role = entry?.role || entry?.key || 'size';
+  const file = entry?.srcLabel;
+  if (!file || file === role || file === 'index.css') return role;
   return `${role} · ${file}`;
 }
 
@@ -1260,6 +1278,35 @@ function UiInspectorInner() {
                   >
                     <Text style={styles.sub}>{c.role || c.key}</Text>
                     <ColorSwatch color={c.value} />
+                  </RowWithFile>
+                ))
+              )}
+            </Section>
+
+            <Section
+              title="Sizing"
+              defaultOpen={!!(description?.sizeEntries || []).length}
+            >
+              {(description?.sizeEntries || []).length === 0 ? (
+                <Text style={styles.mono}>(none)</Text>
+              ) : (
+                description.sizeEntries.map((s) => (
+                  <RowWithFile
+                    key={`sz-${s.role}-${s.value}-${s.src || ''}`}
+                    src={s.src}
+                    pressable
+                    onOpen={(src) => {
+                      openAt(src || s.src || 'styles/index.css', {
+                        symbol: s.symbol,
+                        prop: s.prop || s.key,
+                        theme: s.theme,
+                        token: 0,
+                      });
+                    }}
+                    label={sizeRowLabel(s)}
+                  >
+                    <Text style={styles.sub}>{s.role || s.key}</Text>
+                    <Text style={styles.mono}>{s.value}</Text>
                   </RowWithFile>
                 ))
               )}

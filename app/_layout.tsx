@@ -22,6 +22,7 @@ import {
 WebBrowser.maybeCompleteAuthSession();
 
 const fadeScreen = { animation: 'fade' as const, animationDuration: 220 };
+const authScreen = { animation: 'none' as const };
 const sheetScreen = { animation: 'slide_from_bottom' as const, animationDuration: 280 };
 
 function EmergencyNotificationBridge() {
@@ -45,9 +46,9 @@ function RootStack() {
       <EmergencyNotificationBridge />
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, ...fadeScreen }}>
-        <Stack.Screen name="index" options={fadeScreen} />
-        <Stack.Screen name="login" options={sheetScreen} />
-        <Stack.Screen name="signup" options={sheetScreen} />
+        <Stack.Screen name="index" options={authScreen} />
+        <Stack.Screen name="login" options={authScreen} />
+        <Stack.Screen name="signup" options={authScreen} />
         <Stack.Screen name="home" options={fadeScreen} />
         <Stack.Screen name="messages" options={fadeScreen} />
         <Stack.Screen name="profile" options={fadeScreen} />

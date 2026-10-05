@@ -1,19 +1,19 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Image,
   StyleProp,
   StyleSheet,
   Text,
   ViewStyle,
 } from 'react-native';
 import GlowPressable from './GlowPressable';
+import GoogleBrandIcon from './GoogleBrandIcon';
 import GoogleSetupModal from './GoogleSetupModal';
 import { useTheme } from '../../context/ThemeContext';
 import { useGoogleSignIn } from '../../hooks/useGoogleSignIn';
 import { platformDesign } from '../../constants/platformDesign';
 import { elevationStyle } from '../../utils/platformStyle';
-import { cx, ui } from '../../utils/ui';
+import { cx, isWeb, ui } from '../../utils/ui';
 
 type Props = {
   label?: string;
@@ -48,26 +48,26 @@ export default function GoogleSignInButton({
         onPress={handlePress}
         disabled={loading}
         className={cx('btn-google', loading && 'is-loading', className)}
-        style={[
-          styles.button,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-            borderRadius: platformDesign.button.radius,
-            ...elevationStyle(platformDesign.button.elevation),
-          },
-          style,
-        ]}
+        style={
+          isWeb
+            ? style
+            : [
+                styles.button,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: platformDesign.button.radius,
+                  ...elevationStyle(platformDesign.button.elevation),
+                },
+                style,
+              ]
+        }
       >
         {loading ? (
           <ActivityIndicator color={colors.primary} />
         ) : (
           <>
-            <Image
-              source={require('../../assets/images/google.png')}
-              {...ui('btn-google-icon', styles.icon)}
-              resizeMode="contain"
-            />
+            <GoogleBrandIcon />
             <Text {...ui('btn-google-label', [styles.label, { color: colors.text }])}>
               {label}
             </Text>
@@ -93,6 +93,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minHeight: 52,
   },
-  icon: { width: 28, height: 28, marginRight: 10 },
   label: { fontSize: 16, fontWeight: '600' },
 });

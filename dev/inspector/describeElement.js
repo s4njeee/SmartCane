@@ -655,12 +655,151 @@ function measuredSize(domNode) {
   try {
     const rect = domNode.getBoundingClientRect();
     return {
-      width: Math.round(rect.width),
-      height: Math.round(rect.height),
+      width: Math.round(rect.width * 10) / 10,
+      height: Math.round(rect.height * 10) / 10,
     };
   } catch {
     return null;
   }
+}
+
+const SIZE_COMPUTED_KEYS = [
+  ['width', 'width'],
+  ['height', 'height'],
+  ['minWidth', 'min-width'],
+  ['minHeight', 'min-height'],
+  ['maxWidth', 'max-width'],
+  ['maxHeight', 'max-height'],
+  ['paddingTop', 'padding-top'],
+  ['paddingRight', 'padding-right'],
+  ['paddingBottom', 'padding-bottom'],
+  ['paddingLeft', 'padding-left'],
+  ['marginTop', 'margin-top'],
+  ['marginRight', 'margin-right'],
+  ['marginBottom', 'margin-bottom'],
+  ['marginLeft', 'margin-left'],
+  ['gap', 'gap'],
+  ['rowGap', 'row-gap'],
+  ['columnGap', 'column-gap'],
+  ['fontSize', 'font-size'],
+  ['lineHeight', 'line-height'],
+  ['borderRadius', 'border-radius'],
+  ['borderWidth', 'border-width'],
+];
+
+function formatSizeValue(value) {
+  if (value == null || value === '') return null;
+  const raw = String(value).trim();
+  if (!raw || raw === 'auto' || raw === 'none' || raw === 'normal') return null;
+  if (raw === '0px' || raw === '0') return null;
+  // Skip huge computed max-* defaults
+  if (/^(\d+(\.\d+)?)px$/.test(raw)) {
+    const n = parseFloat(raw);
+    if (n > 10000) return null;
+  }
+  return raw;
+}
+
+function buildSizeEntries(element, flat, fallbackSrc) {
+  const classNames = cssClassNames(element?.props);
+  const domClasses = domClassNames(element?.domNode);
+  const names = classNames.length ? classNames : domClasses;
+  const entries = [];
+  const seen = new Set();
+
+  const push = (role, key, value, propKey) => {
+    const display = formatSizeValue(value);
+    if (display == null && role !== 'measured-width' && role !== 'measured-height') return;
+    const shown =
+      role === 'measured-width' || role === 'measured-height'
+        ? `${Math.round(Number(value) || 0)}px`
+        : display;
+    if (!shown) return;
+    const id = `${role}|${shown}`;
+    if (seen.has(id)) return;
+    seen.add(id);
+    const loc = names.length
+      ? cssSourceLocator(names, propKey || key, null, { forColor: false })
+      : null;
+    if (loc) {
+      // Sizing opens the CSS property, not a color token.
+      const qs = new URLSearchParams();
+      if (loc.symbol) qs.set('symbol', loc.symbol);
+      if (propKey || key) qs.set('prop', propKey || key);
+      qs.set('theme', loc.theme || activeTheme());
+      qs.set('token', '0');
+      entries.push({
+        role,
+        key: propKey || key,
+        value: shown,
+        src: `styles/index.css:1:1?${qs.toString()}`,
+        srcLabel: role,
+        symbol: loc.symbol,
+        prop: propKey || key,
+        theme: loc.theme,
+        token: false,
+      });
+      return;
+    }
+    entries.push({
+      role,
+      key: propKey || key,
+      value: shown,
+      src: fallbackSrc || null,
+      srcLabel: role,
+      symbol: null,
+      prop: propKey || key,
+      token: false,
+    });
+  };
+
+  const measured = measuredSize(element?.domNode);
+  if (measured) {
+    push('measured-width', 'width', measured.width, 'width');
+    push('measured-height', 'height', measured.height, 'height');
+  }
+
+  if (element?.domNode && typeof getComputedStyle === 'function') {
+    try {
+      const cs = getComputedStyle(element.domNode);
+      for (const [camel, role] of SIZE_COMPUTED_KEYS) {
+        const val = cs[camel] ?? cs.getPropertyValue?.(role);
+        push(role, camel, val, camel);
+      }
+    } catch {
+      // ignore
+    }
+  } else if (flat && typeof flat === 'object') {
+    for (const key of [
+      'width',
+      'height',
+      'minWidth',
+      'minHeight',
+      'maxWidth',
+      'maxHeight',
+      'padding',
+      'paddingTop',
+      'paddingRight',
+      'paddingBottom',
+      'paddingLeft',
+      'margin',
+      'marginTop',
+      'marginRight',
+      'marginBottom',
+      'marginLeft',
+      'gap',
+      'fontSize',
+      'lineHeight',
+      'borderRadius',
+      'borderWidth',
+    ]) {
+      if (flat[key] == null) continue;
+      const role = String(key).replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+      push(role, key, flat[key], key);
+    }
+  }
+
+  return entries.slice(0, 24);
 }
 
 function buildAnimationEntries(element, animatedSelf, fallbackSrc) {
@@ -703,6 +842,7 @@ export function describeElement(element) {
       textEntries: [],
       colorEntries: [],
       textColorEntries: [],
+      sizeEntries: [],
       animationEntries: [],
       className: null,
       cssHint: null,
@@ -736,6 +876,7 @@ export function describeElement(element) {
     ...motionInside(element.domNode),
     ...buildAnimationEntries(element, animated, fallbackSrc),
   ];
+  const sizeEntries = buildSizeEntries(element, flat, fallbackSrc);
   const size = measuredSize(element.domNode);
   const layout = pick(flat, LAYOUT_KEYS);
   if (size) {
@@ -752,6 +893,7 @@ export function describeElement(element) {
     elementEntries: elementLabels(element.domNode),
     colorEntries,
     textColorEntries,
+    sizeEntries,
     animationEntries,
     className: (() => {
       const names = cssClassNames(props);

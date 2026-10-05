@@ -131,14 +131,20 @@ function mergeCanesWithDevices(
       eyeglassBattery: eyeglassConnected ? pickEyeglassPercent(glass) : 0,
     };
 
-    const stolenAlert = Boolean(
-      glass?.stolen ||
-        glass?.eyeglassSos ||
-        glass?.sos ||
-        caneTelemetry?.stolen ||
-        caneTelemetry?.eyeglassSos ||
-        caneTelemetry?.sos
-    );
+    // Glass "stolen" / eyeglass SOS only while glasses are live.
+    // Sticky Firebase flags must not alert when eyeglass is offline.
+    const stolenLive =
+      eyeglassConnected &&
+      Boolean(
+        glass?.stolen ||
+          glass?.eyeglassSos ||
+          caneTelemetry?.stolen ||
+          caneTelemetry?.eyeglassSos
+      );
+    const glassEmergencyLive =
+      eyeglassConnected && Boolean(glass?.sos) && !stolenLive;
+    const caneEmergencyLive = online && Boolean(caneTelemetry?.sos);
+    const sosActive = stolenLive || glassEmergencyLive || caneEmergencyLive;
 
     if (!caneTelemetry) {
       return {
@@ -149,8 +155,8 @@ function mergeCanesWithDevices(
         obstacle: false,
         motion: false,
         fall: false,
-        sos: stolenAlert,
-        stolen: Boolean(glass?.stolen || glass?.eyeglassSos),
+        sos: sosActive,
+        stolen: stolenLive,
         frontCm: undefined,
         upperCm: undefined,
         holeCm: undefined,
@@ -236,13 +242,8 @@ function mergeCanesWithDevices(
       obstacle: online ? caneTelemetry.obstacle : false,
       motion: online ? caneTelemetry.motion : false,
       fall: online ? caneTelemetry.fall : false,
-      sos: stolenAlert,
-      stolen: Boolean(
-        caneTelemetry.stolen ||
-          caneTelemetry.eyeglassSos ||
-          glass?.stolen ||
-          glass?.eyeglassSos
-      ),
+      sos: sosActive,
+      stolen: stolenLive,
       frontCm: caneTelemetry.frontCm,
       upperCm: caneTelemetry.upperCm,
       holeCm: caneTelemetry.holeCm,
@@ -317,6 +318,7 @@ export function CaneStatusProvider({ children }: { children: React.ReactNode }) 
   const motionAlerted = useRef<Set<string>>(new Set());
   const fallAlerted = useRef<Set<string>>(new Set());
   const sosAlerted = useRef<Set<string>>(new Set());
+  const sosHydrated = useRef(false);
 
   const openStatus = useCallback((fromTab: TabKey) => {
     setOriginTab(fromTab);
@@ -385,7 +387,20 @@ export function CaneStatusProvider({ children }: { children: React.ReactNode }) 
   }, [userId]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      sosHydrated.current = false;
+      return;
+    }
+
+    // First load: remember already-active SOS so sticky Firebase flags
+    // do not re-notify without a new rising edge (e.g. offline glasses).
+    if (!sosHydrated.current) {
+      canes.forEach((cane) => {
+        if (cane.sos) sosAlerted.current.add(cane.id);
+      });
+      sosHydrated.current = true;
+      return;
+    }
 
     canes.forEach((cane) => {
       const latestRoute = cane.routes[0];
