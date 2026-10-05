@@ -2,6 +2,7 @@ import { Alert } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import { AuthSessionResult } from 'expo-auth-session';
 import { discovery } from 'expo-auth-session/providers/google';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { GoogleAuthProvider, signInWithCredential, updateProfile } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -9,9 +10,19 @@ import { auth, db } from '../firebase/firebaseConfig';
 import { saveUserProfile } from '../firebase/appData';
 
 type GoogleAuthRequestLike = {
+  url: string | null;
   makeAuthUrlAsync: (issuer: typeof discovery) => Promise<string>;
   parseReturnUrl: (url: string) => AuthSessionResult;
 };
+
+function hasOAuthResultParams(url: string): boolean {
+  const decoded = decodeURIComponent(url);
+  return /[?#&](id_token|access_token|code|error)=/.test(decoded);
+}
+
+async function wait(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 /** Expo Go must use the auth.expo.io proxy — Google blocks exp:// redirect URIs. */
 export async function promptGoogleAuthExpoGo(
@@ -20,24 +31,54 @@ export async function promptGoogleAuthExpoGo(
   options?: { showInRecents?: boolean }
 ): Promise<AuthSessionResult> {
   const returnUrl = AuthSession.getDefaultReturnUrl();
-  const authUrl = await request.makeAuthUrlAsync(discovery);
+  const authUrl = request.url ?? (await request.makeAuthUrlAsync(discovery));
   const startUrl = `${proxyRedirectUri}/start?${new URLSearchParams({
     authUrl,
     returnUrl,
   }).toString()}`;
 
-  const browserResult = await WebBrowser.openAuthSessionAsync(startUrl, returnUrl, {
-    showInRecents: options?.showInRecents ?? true,
+  let capturedUrl: string | null = null;
+  const subscription = Linking.addEventListener('url', ({ url }) => {
+    if (hasOAuthResultParams(url)) {
+      capturedUrl = url;
+    }
   });
 
-  if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
-    return { type: browserResult.type };
-  }
-  if (browserResult.type !== 'success') {
-    return { type: 'cancel' };
-  }
+  try {
+    const initialUrl = await Linking.getInitialURL();
+    if (initialUrl && hasOAuthResultParams(initialUrl)) {
+      capturedUrl = initialUrl;
+    }
 
-  return request.parseReturnUrl(browserResult.url);
+    const browserResult = await WebBrowser.openAuthSessionAsync(startUrl, returnUrl, {
+      showInRecents: options?.showInRecents ?? true,
+    });
+
+    if (browserResult.type === 'success' && hasOAuthResultParams(browserResult.url)) {
+      return request.parseReturnUrl(browserResult.url);
+    }
+
+    if (!capturedUrl) {
+      await wait(600);
+    }
+
+    const latestUrl = capturedUrl ?? (await Linking.getInitialURL());
+    if (latestUrl && hasOAuthResultParams(latestUrl)) {
+      return request.parseReturnUrl(latestUrl);
+    }
+
+    if (browserResult.type === 'success') {
+      return request.parseReturnUrl(browserResult.url);
+    }
+
+    if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
+      return { type: browserResult.type };
+    }
+
+    return { type: 'cancel' };
+  } finally {
+    subscription.remove();
+  }
 }
 
 const PAYMENT_KEYWORDS = [

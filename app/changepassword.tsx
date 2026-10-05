@@ -11,6 +11,7 @@ import AppInput from '../components/ui/AppInput';
 import AppButton from '../components/ui/AppButton';
 import { useTheme } from '../context/ThemeContext';
 import { spacing } from '../constants/theme';
+import { ui } from '../utils/ui';
 
 export default function ChangePassword() {
   const router = useRouter();
@@ -54,7 +55,7 @@ export default function ChangePassword() {
     <ScreenLayout scroll withNav>
       <ScreenHeader title="Change Password" />
 
-      <Text style={[styles.hint, { color: colors.textSecondary }]}>
+      <Text {...ui('form-hint is-password', [styles.hint, { color: colors.textSecondary }])}>
         Choose a strong password with at least 6 characters.
       </Text>
 
@@ -79,7 +80,7 @@ export default function ChangePassword() {
         />
       </GlassCard>
 
-      <AppButton title="Update Password" onPress={handleChangePassword} loading={loading} style={styles.btn} />
+      <AppButton title="Update Password" onPress={handleChangePassword} loading={loading} className="form-save" style={styles.btn} />
     </ScreenLayout>
     </AppShell>
   );

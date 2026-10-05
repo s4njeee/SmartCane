@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { radius } from '../../constants/theme';
+import { cx, isWeb, ui, webClassStyle } from '../../utils/ui';
 
 type Props = TextInputProps & {
   label: string;
@@ -30,6 +31,7 @@ export default function AppInput({
   onFocus,
   onBlur,
   onChangeText,
+  style,
   ...rest
 }: Props) {
   const { theme } = useTheme();
@@ -54,15 +56,18 @@ export default function AppInput({
       : colors.border;
 
   return (
-    <View style={styles.wrap}>
+    <View {...ui(cx('input-wrap', style && 'is-tight'), [styles.wrap, style], style)}>
       <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: colors.inputBg,
-            borderColor,
-          },
-        ]}
+        {...ui(
+          cx('input', focused && 'is-focused', hasError && 'is-error'),
+          [
+            styles.container,
+            {
+              backgroundColor: colors.inputBg,
+              borderColor,
+            },
+          ],
+        )}
       >
         <Animated.Text
           pointerEvents="none"
@@ -84,15 +89,19 @@ export default function AppInput({
         </Animated.Text>
 
         <TextInput
-          style={[
-            styles.input,
-            floated && styles.inputFloated,
-            { color: colors.text },
-            secureToggle && styles.inputWithToggle,
-          ]}
+          {...ui(
+            cx('input-field', floated && 'is-floated', secureToggle && 'has-toggle'),
+            [
+              styles.input,
+              floated && styles.inputFloated,
+              { color: colors.text },
+              secureToggle && styles.inputWithToggle,
+            ],
+          )}
           value={value}
           placeholder=""
           placeholderTextColor="transparent"
+          keyboardAppearance={theme.mode === 'dark' ? 'dark' : 'light'}
           onChangeText={onChangeText}
           onFocus={(e) => {
             setFocused(true);
@@ -108,20 +117,23 @@ export default function AppInput({
           <Pressable
             onPress={onToggleSecure}
             hitSlop={8}
-            style={styles.eyeBtn}
+            {...ui('input-eye', styles.eyeBtn)}
             accessibilityRole="button"
             accessibilityLabel={showSecure ? 'Hide password' : 'Show password'}
           >
             <Ionicons
               name={showSecure ? 'eye' : 'eye-off'}
               size={20}
-              color={hasError ? colors.danger : colors.primary}
+              color={isWeb ? undefined : hasError ? colors.danger : colors.primary}
+              style={isWeb ? webClassStyle(cx('input-icon-glyph', hasError && 'is-bad')) : undefined}
             />
           </Pressable>
         )}
       </View>
       {hasError ? (
-        <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
+        <Text {...ui('input-error', [styles.errorText, { color: colors.danger }])}>
+          {error}
+        </Text>
       ) : null}
     </View>
   );

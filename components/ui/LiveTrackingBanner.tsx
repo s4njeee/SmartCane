@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../context/ThemeContext';
 import { mapBannerTop } from '../../utils/layoutInsets';
+import { elevationStyle, pressRipple } from '../../utils/platformStyle';
+import { cx, isWeb, ui, uiWeb, webClassStyle } from '../../utils/ui';
+import { hudStyles, useHudPalette } from './mapHud';
 
-const ROUTE_BLUE = '#2563EB';
 const FAB_SIZE = 48;
 
 type Props = {
@@ -13,95 +14,119 @@ type Props = {
   onToggle: () => void;
   caneName?: string;
   deviceOnline?: boolean;
+  isOffline?: boolean;
   battery?: number;
   address?: string;
+  eyeglassOnline?: boolean;
 };
 
-/** Compact cane status — same card as the Go bar, pinned to the left. */
+/** Compact cane status — follows light / dark theme. Map switch stays bottom-right. */
 export default function LiveTrackingBanner({
   expanded,
   onToggle,
   caneName,
   deviceOnline = false,
+  eyeglassOnline = false,
+  isOffline: _isOffline = false,
   battery,
   address,
 }: Props) {
-  const { theme } = useTheme();
-  const { colors } = theme;
   const insets = useSafeAreaInsets();
+  const hud = useHudPalette();
   const top = mapBannerTop(insets);
   const name = caneName || 'Cane';
+  const hasPlace = Boolean(address?.trim());
 
-  const batteryValue =
-    deviceOnline && battery != null ? `${battery}%` : 'Offline';
-  const locationValue = address?.trim()
+  const batteryValue = deviceOnline
+    ? battery != null
+      ? `${battery}%`
+      : '—'
+    : 'Cane offline';
+  const locationValue = hasPlace
     ? address
     : deviceOnline
       ? 'Locating…'
-      : 'Offline';
+      : 'Last known GPS';
 
   if (!expanded) {
     return (
-      <View style={[styles.wrap, { top }]} pointerEvents="box-none">
+      <View
+        {...uiWeb('hud-wrap', { top, zIndex: 70 }, [hudStyles.wrap, { top, zIndex: 70 }])}
+        pointerEvents="box-none"
+      >
         <Pressable
           onPress={onToggle}
-          android_ripple={{ color: colors.primary + '22' }}
+          android_ripple={pressRipple(hud.ripple)}
           accessibilityRole="button"
           accessibilityLabel={`Show ${name} status`}
-          style={[
+          {...ui('hud-fab', [
             styles.fab,
             {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
+              backgroundColor: hud.bg,
+              borderColor: hud.border,
+              ...elevationStyle(4),
             },
-          ]}
+          ])}
         >
-          <Ionicons name="accessibility" size={22} color={ROUTE_BLUE} />
+          <Ionicons
+            name="accessibility"
+            size={22}
+            color={isWeb ? undefined : hud.metric}
+            style={isWeb ? webClassStyle('track-glyph') : undefined}
+          />
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View style={[styles.wrap, { top }]} pointerEvents="box-none">
+    <View
+      {...uiWeb('hud-wrap', { top, zIndex: 70 }, [hudStyles.wrap, { top, zIndex: 70 }])}
+      pointerEvents="box-none"
+    >
       <View
-        style={[
-          styles.bar,
-          { backgroundColor: colors.surface, borderColor: colors.border },
-        ]}
+        {...ui('hud-bar', [
+          hudStyles.bar,
+          { backgroundColor: hud.bg, borderColor: hud.border },
+        ])}
       >
         <Pressable
           onPress={onToggle}
-          android_ripple={{ color: colors.primary + '18' }}
+          android_ripple={pressRipple(hud.ripple)}
           accessibilityRole="button"
           accessibilityLabel="Hide cane status"
-          style={styles.barPress}
+          {...ui('hud-bar-press', hudStyles.barPress)}
         >
-          <View style={styles.body}>
-            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-              {name}
-            </Text>
-            <Text
-              style={[
-                styles.meta,
-                { color: deviceOnline ? colors.primary : colors.danger },
-              ]}
-            >
-              {batteryValue}
-            </Text>
-            <Text style={[styles.sub, { color: colors.textMuted }]} numberOfLines={2}>
-              {locationValue}
-            </Text>
-          </View>
+          <Text {...ui('hud-title', [hudStyles.title, { color: hud.title }])} numberOfLines={1}>
+            {name}
+          </Text>
+          <Text
+            {...ui(
+              cx('hud-metric', !deviceOnline && 'is-offline'),
+              [hudStyles.metric, { color: deviceOnline ? hud.metric : hud.offline }],
+            )}
+          >
+            {batteryValue}
+          </Text>
+          <Text {...ui('hud-sub', [hudStyles.sub, { color: hud.sub }])} numberOfLines={2}>
+            {deviceOnline ? 'Cane live · ' : 'Cane offline · '}
+            {eyeglassOnline ? 'Eyeglass live · ' : 'Eyeglass offline · '}
+            {locationValue}
+          </Text>
         </Pressable>
         <Pressable
           onPress={onToggle}
-          android_ripple={{ color: colors.textMuted + '33' }}
-          style={[styles.closeBtn, { backgroundColor: colors.cardAlt }]}
+          android_ripple={pressRipple(hud.ripple)}
+          {...ui('hud-close', [styles.closeBtn, { backgroundColor: hud.closeBg }])}
           hitSlop={8}
           accessibilityLabel="Close"
         >
-          <Ionicons name="chevron-up" size={18} color={colors.textSecondary} />
+          <Ionicons
+            name="chevron-up"
+            size={18}
+            color={isWeb ? undefined : hud.sub}
+            style={isWeb ? webClassStyle('track-chevron-glyph') : undefined}
+          />
         </Pressable>
       </View>
     </View>
@@ -109,14 +134,6 @@ export default function LiveTrackingBanner({
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    position: 'absolute',
-    left: 12,
-    right: 72,
-    zIndex: 70,
-    elevation: 12,
-    alignItems: 'flex-start',
-  },
   fab: {
     width: FAB_SIZE,
     height: FAB_SIZE,
@@ -124,26 +141,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
-    overflow: 'hidden',
+    overflow: Platform.OS === 'android' ? 'hidden' : 'visible',
   },
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    maxWidth: '100%',
-    gap: 8,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    elevation: 3,
-    overflow: 'hidden',
-  },
-  barPress: { flexShrink: 1 },
-  body: { minWidth: 140, maxWidth: 220 },
-  title: { fontSize: 15, fontWeight: '700' },
-  meta: { fontSize: 14, fontWeight: '700', marginTop: 2 },
-  sub: { fontSize: 12, marginTop: 2 },
   closeBtn: {
     width: 36,
     height: 36,

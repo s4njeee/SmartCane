@@ -10,9 +10,12 @@ import { useCaneStatus } from "../../context/CaneStatusContext";
 import { useTheme } from "../../context/ThemeContext";
 import { formatDistance, haversineMeters } from "../../utils/geoDistance";
 import { tabBarClearance } from "../../utils/layoutInsets";
+import { elevationStyle } from "../../utils/platformStyle";
 import {
+  durationFromDistance,
   fetchRoadRoute,
   formatDuration,
+  osrmProfileForMode,
   pathMidpoint,
   routeFetchKey,
 } from "../../utils/osrmRoute";
@@ -68,7 +71,15 @@ function CaneBlueDot({ active }: { active?: boolean }) {
 function EtaBubble({ label }: { label: string }) {
   return (
     <View style={styles.etaBubble}>
-      <Text style={styles.etaBubbleText}>{label}</Text>
+      <Text
+        style={styles.etaBubbleText}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+        maxFontSizeMultiplier={1.2}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -100,7 +111,7 @@ export default function CaneMap({
     routeDurationSeconds,
     isNavigating,
   } = useNavigation();
-  const { closeStatus } = useCaneStatus();
+  const { closeStatus, isStatusOpen } = useCaneStatus();
 
   const mapRef = useRef<MapView | null>(null);
   const [tracksViews, setTracksViews] = useState(true);
@@ -152,8 +163,8 @@ export default function CaneMap({
       : straightLineMeters;
   const distanceLabel = formatDistance(displayDistance);
   const durationLabel =
-    (roadDuration || routeDurationSeconds) > 0
-      ? formatDuration(roadDuration || routeDurationSeconds)
+    displayDistance > 0
+      ? formatDuration(durationFromDistance(displayDistance, travelMode))
       : "—";
 
   const etaMid = useMemo(() => pathMidpoint(displayPath), [displayPath]);
@@ -170,7 +181,10 @@ export default function CaneMap({
     if (savedRoutePoints.length > 2) return;
     setRouteMetrics(
       showRoute && roadDistance > 0 ? roadDistance : straightLineMeters,
-      roadDuration
+      durationFromDistance(
+        showRoute && roadDistance > 0 ? roadDistance : straightLineMeters,
+        travelMode
+      )
     );
   }, [
     showRoute,
@@ -178,6 +192,7 @@ export default function CaneMap({
     roadDuration,
     straightLineMeters,
     savedRoutePoints.length,
+    travelMode,
     setRouteMetrics,
   ]);
 
@@ -217,7 +232,9 @@ export default function CaneMap({
 
     const hasRoadGeometry =
       savedRoutePoints.length > 2 || roadPathRef.current.length > 2;
-    const modeChanged = lastFetchedMode.current !== travelMode;
+    const modeChanged =
+      osrmProfileForMode(lastFetchedMode.current) !==
+      osrmProfileForMode(travelMode);
 
     if (isNavigating && hasRoadGeometry && !modeChanged) {
       return;
@@ -361,14 +378,14 @@ export default function CaneMap({
         provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
         showsUserLocation={false}
         showsMyLocationButton={false}
-        showsCompass
+        showsCompass={false}
         showsBuildings
         showsIndoors
-        rotateEnabled
-        pitchEnabled
-        scrollEnabled
-        zoomEnabled
-        zoomTapEnabled
+        rotateEnabled={!isStatusOpen}
+        pitchEnabled={!isStatusOpen}
+        scrollEnabled={!isStatusOpen}
+        zoomEnabled={!isStatusOpen}
+        zoomTapEnabled={!isStatusOpen}
         zoomControlEnabled={false}
         toolbarEnabled={false}
         moveOnMarkerPress={false}
@@ -440,10 +457,7 @@ export default function CaneMap({
           </>
         )}
 
-        {showRoute &&
-          etaMid &&
-          (roadDuration > 0 || routeDurationSeconds > 0) &&
-          !routing && (
+        {showRoute && etaMid && displayDistance > 0 && !routing && (
           <Marker
             identifier="eta"
             coordinate={etaMid}
@@ -451,9 +465,7 @@ export default function CaneMap({
             tracksViewChanges={false}
             zIndex={4}
           >
-            <EtaBubble
-              label={formatDuration(roadDuration || routeDurationSeconds)}
-            />
+            <EtaBubble label={durationLabel} />
           </Marker>
         )}
 
@@ -503,7 +515,7 @@ export default function CaneMap({
         caneName={caneName}
       />
 
-      {!showRoute && !directionsOpen && (
+      {!showRoute && !directionsOpen && !isStatusOpen && (
         <View
           style={[
             styles.legend,
@@ -511,6 +523,7 @@ export default function CaneMap({
               bottom: legendBottom,
               backgroundColor: colors.surface,
               borderColor: colors.border,
+              ...elevationStyle(2, colors.shadow),
             },
           ]}
         >
@@ -530,6 +543,7 @@ export default function CaneMap({
         </View>
       )}
 
+      {!isStatusOpen && !directionsOpen && (
       <View style={[styles.fabColumn, { bottom: fabBottom }]}>
         {Math.abs(mapHeading) > 2 && (
           <GlowPressable
@@ -541,7 +555,7 @@ export default function CaneMap({
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
                 borderRadius: 12,
-                elevation: 2,
+                ...elevationStyle(2, colors.shadow),
               },
             ]}
           >
@@ -562,7 +576,7 @@ export default function CaneMap({
               backgroundColor: colors.surface,
               borderColor: colors.border,
               borderRadius: 12,
-              elevation: 2,
+              ...elevationStyle(2, colors.shadow),
             },
           ]}
         >
@@ -573,6 +587,7 @@ export default function CaneMap({
           />
         </GlowPressable>
       </View>
+      )}
     </>
   );
 }
@@ -631,12 +646,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderColor: "#fff",
-    elevation: 4,
+    elevation: Platform.OS === "android" ? 2 : 4,
+    maxWidth: 160,
   },
   etaBubbleText: {
     color: "#fff",
     fontSize: 12,
     fontWeight: "800",
+    includeFontPadding: false,
   },
   legend: {
     position: "absolute",
@@ -647,7 +664,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 4,
-    elevation: 2,
   },
   legendRow: {
     flexDirection: "row",

@@ -14,7 +14,6 @@ The purpose of SmartCane is to develop an affordable and intelligent assistive s
 - 👨‍👩‍👧 Guardian monitoring
 - 🔔 Push notifications
 - ☁️ Cloud-based data synchronization using Supabase
-- 🔐 Secure user authentication
 - 📱 User-friendly mobile application
 
 ## Built With
@@ -88,7 +87,19 @@ SmartCane/
 5. Monitor the user's live location through GPS.
 6. Use the SOS feature during emergencies to notify guardians.
 
-## Future Improvementsx`
+## Dev UI Inspector
+
+Dev-only overlay that shows the source file and styles for any tapped element. It is stripped from production builds (`__DEV__` gate + Babel/Metro no-ops).
+
+1. Restart Metro with a clean cache after pulling inspector changes. Prefer `npm start` (sets `REACT_EDITOR=cursor` automatically), or:
+   `$env:REACT_EDITOR='cursor'; npx expo start --go -c`
+   Cursor’s **Install 'cursor' command in PATH** must already be enabled.
+2. Open the app in **Expo Go**, shake the device, or press **`m`** in the Metro terminal (on an Android emulator, Ctrl+M). Or tap the small **Insp** chip (top-right, dev only).
+3. Choose **Toggle UI Inspector** (or tap **Insp**).
+4. Tap any UI element — the tap is captured (buttons do not fire). A panel shows `file:line`, style summary, colors, props/hooks, and breadcrumbs.
+5. Use **Open in editor**, tap a breadcrumb to inspect an ancestor, **Minimize** / restore the pill, or **Close** / toggle off.
+
+## Future Improvements
 
 - Offline navigation support
 - Battery health monitoring

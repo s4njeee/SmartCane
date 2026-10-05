@@ -13,6 +13,7 @@ import { getGoogleRedirectUrisForSetup } from '../../constants/googleAuth';
 import { isValidGoogleClientId, saveGoogleWebClientId } from '../../utils/googleClientStore';
 import AppButton from './AppButton';
 import GlassCard from './GlassCard';
+import { ui } from '../../utils/ui';
 
 const FIREBASE_GOOGLE_URL =
   'https://console.firebase.google.com/project/smartcane-ddedd/authentication/providers';
@@ -53,22 +54,24 @@ export default function GoogleSetupModal({ visible, onClose, onSaved }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <GlassCard style={styles.card}>
-          <Text style={[styles.title, { color: colors.text }]}>Connect Google Sign-In</Text>
-          <Text style={[styles.body, { color: colors.textSecondary }]}>
+      <View {...ui('google-setup-overlay', styles.overlay)}>
+        <GlassCard className="google-setup-card" style={styles.card}>
+          <Text {...ui('google-setup-title', [styles.title, { color: colors.text }])}>
+            Connect Google Sign-In
+          </Text>
+          <Text {...ui('google-setup-body', [styles.body, { color: colors.textSecondary }])}>
             One-time setup (free, no billing):
           </Text>
-          <Text style={[styles.step, { color: colors.textSecondary }]}>
+          <Text {...ui('google-setup-step', [styles.step, { color: colors.textSecondary }])}>
             1. Open Firebase → Authentication → Google → Enable
           </Text>
-          <Text style={[styles.step, { color: colors.textSecondary }]}>
+          <Text {...ui('google-setup-step', [styles.step, { color: colors.textSecondary }])}>
             2. Copy the Web client ID
           </Text>
-          <Text style={[styles.step, { color: colors.textSecondary }]}>
+          <Text {...ui('google-setup-step', [styles.step, { color: colors.textSecondary }])}>
             3. In Google Cloud, edit the Web client and add this Authorized redirect URI:{'\n'}
             {getGoogleRedirectUrisForSetup().map((uri) => (
-              <Text key={uri} style={{ color: colors.primary }}>
+              <Text key={uri} {...ui('google-setup-uri', { color: colors.primary })}>
                 {uri}
                 {'\n'}
               </Text>
@@ -98,16 +101,18 @@ export default function GoogleSetupModal({ visible, onClose, onSaved }: Props) {
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
-            style={[
+            {...ui('input-plain', [
               styles.input,
               {
                 color: colors.text,
                 borderColor: colors.border,
                 backgroundColor: colors.inputBg,
               },
-            ]}
+            ])}
           />
-          {error ? <Text style={[styles.error, { color: colors.danger }]}>{error}</Text> : null}
+          {error ? (
+            <Text {...ui('text-error', [styles.error, { color: colors.danger }])}>{error}</Text>
+          ) : null}
 
           <AppButton title="Save & Continue" onPress={handleSave} loading={saving} />
           <AppButton title="Cancel" variant="ghost" onPress={onClose} style={styles.cancelBtn} />

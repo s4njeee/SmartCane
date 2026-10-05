@@ -6,7 +6,7 @@ export const androidDesign: PlatformDesign = {
 
   card: {
     radius: 12,
-    borderWidth: 0.5,
+    borderWidth: 1,
     padding: 16,
     useGlass: false,
     useShine: false,
@@ -36,7 +36,7 @@ export const androidDesign: PlatformDesign = {
   },
 
   sheet: {
-    contentPanning: false,
+    contentPanning: true,
     topRadius: 16,
     handleWidth: 36,
     useTopGlow: false,
@@ -49,8 +49,8 @@ export const androidDesign: PlatformDesign = {
 
   map: {
     fabExtraClearance: 16,
-    mapPadExtra: 32,
-    tracksViewChangesMs: 1500,
+    mapPadExtra: 16,
+    tracksViewChangesMs: 600,
   },
 
   button: {

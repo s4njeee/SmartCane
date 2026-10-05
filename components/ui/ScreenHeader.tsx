@@ -6,6 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { platformDesign } from '../../constants/platformDesign';
 import { radius, spacing } from '../../constants/theme';
 import GlowPressable from './GlowPressable';
+import { isWeb, ui, webClassStyle } from '../../utils/ui';
 
 type Props = {
   title: string;
@@ -20,11 +21,12 @@ export default function ScreenHeader({ title, showBack = true, right, subtitle }
   const router = useRouter();
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.row}>
+    <View {...ui('screen-header', styles.wrap)}>
+      <View {...ui('screen-header-row', styles.row)}>
         {showBack ? (
           <GlowPressable
             onPress={() => router.back()}
+            className="screen-header-back"
             style={[
               styles.backBtn,
               {
@@ -35,31 +37,42 @@ export default function ScreenHeader({ title, showBack = true, right, subtitle }
               },
             ]}
           >
-            <Ionicons name="chevron-back" size={22} color={colors.text} />
+            <Ionicons
+            name="chevron-back"
+            size={22}
+            color={isWeb ? undefined : colors.text}
+            style={isWeb ? webClassStyle('header-back-glyph') : undefined}
+          />
           </GlowPressable>
         ) : (
-          <View style={styles.side} />
+          <View {...ui('screen-header-side', styles.side)} />
         )}
-        <View style={styles.titleBlock}>
+        <View {...ui('screen-header-title-block', styles.titleBlock)}>
           <Text
-            style={[
+            {...ui('screen-header-title', [
               styles.title,
               {
                 color: colors.text,
                 fontWeight: platformDesign.typography.screenTitleWeight,
               },
-            ]}
+            ])}
             numberOfLines={1}
           >
             {title}
           </Text>
           {subtitle ? (
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text
+              {...ui('screen-header-subtitle', [
+                styles.subtitle,
+                { color: colors.textSecondary },
+              ])}
+              numberOfLines={1}
+            >
               {subtitle}
             </Text>
           ) : null}
         </View>
-        {right ?? <View style={styles.side} />}
+        {right ?? <View {...ui('screen-header-side', styles.side)} />}
       </View>
     </View>
   );

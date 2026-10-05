@@ -8,6 +8,7 @@ import GoogleSignInButton from '../components/ui/GoogleSignInButton';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
 import { spacing } from '../constants/theme';
+import { ui } from '../utils/ui';
 
 export default function ChooseScreen() {
   const router = useRouter();
@@ -16,23 +17,23 @@ export default function ChooseScreen() {
 
   return (
     <ScreenLayout contentStyle={styles.content}>
-      <View style={styles.topRow}>
+      <View {...ui('auth-top-row', styles.topRow)}>
         <ThemeToggle compact />
       </View>
 
-      <View style={styles.hero}>
+      <View {...ui('welcome-hero', styles.hero)}>
         <Image
           source={require('../assets/images/SmartGuide.png')}
-          style={styles.logo}
+          {...ui('welcome-logo', styles.logo)}
           resizeMode="contain"
         />
-        <Text style={[styles.title, { color: colors.text }]}>SmartGuide</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+        <Text {...ui('text-title', [styles.title, { color: colors.text }])}>SmartGuide</Text>
+        <Text {...ui('text-subtitle', [styles.subtitle, { color: colors.textSecondary }])}>
           Track canes, routes, and alerts in one place.
         </Text>
       </View>
 
-      <GlassCard style={styles.card} elevated={false}>
+      <GlassCard className="welcome-card" style={styles.card} elevated={false}>
         <AppButton title="Log in" onPress={() => router.push('/login')} />
         <AppButton
           title="Create account"
@@ -40,10 +41,10 @@ export default function ChooseScreen() {
           onPress={() => router.push('/signup')}
           style={styles.gap}
         />
-        <View style={styles.dividerRow}>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <Text style={[styles.orText, { color: colors.textMuted }]}>or</Text>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <View {...ui('divider-row', styles.dividerRow)}>
+          <View {...ui('divider', [styles.divider, { backgroundColor: colors.border }])} />
+          <Text {...ui('or-text is-welcome', [styles.orText, { color: colors.textMuted }])}>or</Text>
+          <View {...ui('divider', [styles.divider, { backgroundColor: colors.border }])} />
         </View>
         <GoogleSignInButton onSuccess={() => router.replace('/home')} />
       </GlassCard>

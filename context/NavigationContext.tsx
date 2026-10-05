@@ -6,9 +6,13 @@ import React, {
   useState,
 } from 'react';
 import { formatDistance } from '../utils/geoDistance';
-import { formatDuration } from '../utils/osrmRoute';
+import {
+  durationFromDistance,
+  formatDuration,
+  type TravelMode,
+} from '../utils/osrmRoute';
 
-export type TravelMode = 'driving' | 'foot' | 'cycling';
+export type { TravelMode };
 
 type LatLng = { latitude: number; longitude: number };
 
@@ -58,8 +62,8 @@ type NavigationContextValue = {
 
 const TRAVEL_MODE_LABELS: Record<TravelMode, string> = {
   driving: 'Drive',
+  motorcycle: 'Motorcycle',
   foot: 'Walk',
-  cycling: 'Cycle',
 };
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
@@ -158,7 +162,11 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       setRouteMetrics,
       distanceLabel: formatDistance(routeDistanceMeters),
       durationLabel:
-        routeDurationSeconds > 0 ? formatDuration(routeDurationSeconds) : '—',
+        routeDistanceMeters > 0
+          ? formatDuration(
+              durationFromDistance(routeDistanceMeters, travelMode)
+            )
+          : '—',
       goBannerExpanded,
       setGoBannerExpanded,
       phoneLocation,

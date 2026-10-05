@@ -20,6 +20,7 @@ import GoogleSignInButton from '../components/ui/GoogleSignInButton';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
 import { spacing } from '../constants/theme';
+import { ui } from '../utils/ui';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -61,13 +62,13 @@ export default function LoginScreen() {
 
   const content = (
     <ScreenLayout scroll contentStyle={styles.content}>
-      <View style={styles.topRow}>
+      <View {...ui('auth-top-row', styles.topRow)}>
         <ThemeToggle />
       </View>
 
-      <Image source={require('../assets/images/SmartGuide.png')} style={styles.logo} resizeMode="contain" />
-      <Text style={[styles.title, { color: colors.text }]}>Sign in</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+      <Image source={require('../assets/images/SmartGuide.png')} {...ui('auth-logo', styles.logo)} resizeMode="contain" />
+      <Text {...ui('text-title-lg is-login', [styles.title, { color: colors.text }])}>Sign in</Text>
+      <Text {...ui('auth-subtitle is-login', [styles.subtitle, { color: colors.textSecondary }])}>
         Access your SmartCane dashboard
       </Text>
 
@@ -90,29 +91,30 @@ export default function LoginScreen() {
           style={styles.passwordInput}
         />
 
-        <Pressable onPress={handleForgotPassword} style={styles.forgotRow}>
-          <Text style={[styles.forgotText, { color: colors.primary }]}>Forgot password?</Text>
+        <Pressable onPress={handleForgotPassword} {...ui('forgot-row', styles.forgotRow)}>
+          <Text {...ui('forgot-text', [styles.forgotText, { color: colors.primary }])}>Forgot password?</Text>
         </Pressable>
 
         <AppButton title="Sign In" onPress={handleLogin} loading={loading} />
 
-        <View style={styles.dividerRow}>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <Text style={[styles.orText, { color: colors.textMuted }]}>or</Text>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <View {...ui('divider-row is-auth', styles.dividerRow)}>
+          <View {...ui('divider is-thick', [styles.divider, { backgroundColor: colors.border }])} />
+          <Text {...ui('or-text is-login', [styles.orText, { color: colors.textMuted }])}>or</Text>
+          <View {...ui('divider is-thick', [styles.divider, { backgroundColor: colors.border }])} />
         </View>
 
         <GoogleSignInButton
           label="Google"
+          className="btn-google is-input-bg"
           style={{ backgroundColor: colors.inputBg }}
           onSuccess={() => router.replace('/home')}
         />
       </GlassCard>
 
-      <Pressable onPress={() => router.push('/signup')} style={styles.signupRow}>
-        <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+      <Pressable onPress={() => router.push('/signup')} {...ui('auth-footer-row', styles.signupRow)}>
+        <Text {...ui('auth-footer-text', [styles.footerText, { color: colors.textSecondary }])}>
           Don't have an account?{' '}
-          <Text style={{ color: colors.primary, fontWeight: '700' }}>Sign up</Text>
+          <Text {...ui('auth-footer-link', { color: colors.primary, fontWeight: '700' })}>Sign up</Text>
         </Text>
       </Pressable>
     </ScreenLayout>
@@ -120,11 +122,11 @@ export default function LoginScreen() {
 
   // Android already resizes via softwareKeyboardLayoutMode — avoid double-offset.
   if (Platform.OS === 'android') {
-    return <View style={styles.flex}>{content}</View>;
+    return <View {...ui('flex-1', styles.flex)}>{content}</View>;
   }
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior="padding" keyboardVerticalOffset={0}>
+    <KeyboardAvoidingView {...ui('flex-1', styles.flex)} behavior="padding" keyboardVerticalOffset={0}>
       {content}
     </KeyboardAvoidingView>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleProp, StyleSheet, Text, TextStyle, ViewStyle } from 'react-native';
 import GlowPressable from './GlowPressable';
 import { useTheme } from '../../context/ThemeContext';
+import { cx, ui } from '../../utils/ui';
 
 type Props = {
   onPress: () => void;
@@ -25,6 +26,11 @@ export default function AnimatedLink({
     <GlowPressable
       onPress={onPress}
       glowColor={colors.primary}
+      className={cx(
+        'link-wrap',
+        align === 'left' && 'is-left',
+        align === 'right' && 'is-right',
+      )}
       style={[
         styles.wrap,
         align === 'left' && styles.left,
@@ -33,7 +39,9 @@ export default function AnimatedLink({
       ]}
     >
       {typeof children === 'string' ? (
-        <Text style={[styles.text, { color: colors.textSecondary }, style]}>{children}</Text>
+        <Text {...ui('link-text', [styles.text, { color: colors.textSecondary }, style], style)}>
+          {children}
+        </Text>
       ) : (
         children
       )}

@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import BottomTabBar, { TabKey } from './BottomTabBar';
 import { useCaneStatus } from '../../context/CaneStatusContext';
+import { ui } from '../../utils/ui';
 
 type Props = {
   active: TabKey;
@@ -48,7 +49,7 @@ export default function AppShell({ active, children, onTabPress }: Props) {
   );
 
   return (
-    <View style={styles.shell}>
+    <View {...ui('app-shell', styles.shell)}>
       {children}
       <BottomTabBar active={highlightedTab} onPress={handleTab} />
     </View>

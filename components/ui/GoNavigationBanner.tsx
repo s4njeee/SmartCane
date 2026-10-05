@@ -1,18 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useSegments } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCaneStatus } from '../../context/CaneStatusContext';
 import { useNavigation } from '../../context/NavigationContext';
-import { useTheme } from '../../context/ThemeContext';
 import { mapBannerTop } from '../../utils/layoutInsets';
+import { pressRipple } from '../../utils/platformStyle';
+import { isWeb, ui, uiWeb, webClassStyle } from '../../utils/ui';
+import { hudStyles, useHudPalette } from './mapHud';
 
-/** Simple Go bar — tap to minimize, End to stop. Home only. */
+/** Full-width Go bar — follows light / dark theme. */
 export default function GoNavigationBanner() {
-  const { theme } = useTheme();
-  const { colors } = theme;
   const insets = useSafeAreaInsets();
+  const hud = useHudPalette();
   const pathname = usePathname();
   const segments = useSegments();
   const { isStatusOpen } = useCaneStatus();
@@ -33,102 +34,101 @@ export default function GoNavigationBanner() {
   if (!isNavigating || !onHome || isStatusOpen) return null;
 
   const top = mapBannerTop(insets);
-  const eta =
-    durationLabel !== '—'
-      ? `${durationLabel} · ${distanceLabel}`
-      : distanceLabel;
 
   if (!expanded) {
     return (
-      <View style={[styles.wrap, { top }]}>
+      <View
+        {...uiWeb('hud-wrap', { top, zIndex: 200 }, [hudStyles.wrap, { top, zIndex: 200 }])}
+        pointerEvents="box-none"
+      >
         <Pressable
           onPress={() => setExpanded(true)}
-          android_ripple={{ color: colors.primary + '18' }}
-          style={[
-            styles.pill,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
+          android_ripple={pressRipple(hud.ripple)}
+          {...ui('hud-pill', [
+            hudStyles.pill,
+            { backgroundColor: hud.bg, borderColor: hud.border },
+          ])}
         >
-          <Ionicons name="navigate" size={16} color={colors.primary} />
-          <Text style={[styles.pillText, { color: colors.text }]}>{eta}</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+          <Ionicons
+            name="navigate"
+            size={16}
+            color={isWeb ? undefined : hud.metric}
+            style={isWeb ? webClassStyle('hud-nav-glyph') : undefined}
+          />
+          <Text
+            {...ui('hud-pill-text', [hudStyles.pillText, { color: hud.title }])}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            maxFontSizeMultiplier={1.2}
+          >
+            {durationLabel} · {distanceLabel}
+          </Text>
+          <Ionicons
+            name="chevron-down"
+            size={16}
+            color={isWeb ? undefined : hud.sub}
+            style={isWeb ? webClassStyle('hud-chevron-glyph') : undefined}
+          />
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View style={[styles.wrap, { top }]}>
+    <View
+      {...uiWeb('hud-wrap', { top, zIndex: 200 }, [hudStyles.wrap, { top, zIndex: 200 }])}
+      pointerEvents="box-none"
+    >
       <View
-        style={[
-          styles.bar,
-          { backgroundColor: colors.surface, borderColor: colors.border },
-        ]}
+        {...ui('hud-bar', [
+          hudStyles.bar,
+          { backgroundColor: hud.bg, borderColor: hud.border },
+        ])}
       >
-        <Pressable onPress={() => setExpanded(false)} style={styles.barPress}>
-          <View style={styles.body}>
-            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-              To {destinationName || 'SmartCane'}
-            </Text>
-            <Text style={[styles.meta, { color: colors.primary }]}>{eta}</Text>
-            <Text style={[styles.sub, { color: colors.textMuted }]}>
-              {travelModeLabel}
-            </Text>
-          </View>
+        <Pressable onPress={() => setExpanded(false)} {...ui('hud-bar-press', hudStyles.barPress)}>
+          <Text
+            {...ui('hud-title', [hudStyles.title, { color: hud.title }])}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
+          >
+            To {destinationName || 'SmartCane'}
+          </Text>
+          <Text
+            {...ui('hud-metric', [hudStyles.metric, { color: hud.metric }])}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            maxFontSizeMultiplier={1.2}
+          >
+            {durationLabel} · {distanceLabel}
+          </Text>
+          <Text
+            {...ui('hud-sub', [hudStyles.sub, { color: hud.sub }])}
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
+          >
+            {travelModeLabel}
+          </Text>
         </Pressable>
         <Pressable
           onPress={endGo}
-          android_ripple={{ color: '#ffffff33' }}
-          style={[styles.endBtn, { backgroundColor: colors.danger }]}
+          android_ripple={pressRipple('#ffffff33')}
+          {...ui('hud-action', [
+            hudStyles.actionBtn,
+            {
+              backgroundColor: hud.end,
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+              borderRadius: 10,
+            },
+          ])}
         >
-          <Text style={styles.endText}>End</Text>
+          <Text {...ui('hud-action-label', { color: '#fff', fontWeight: '700', fontSize: 15 })}>
+            End
+          </Text>
         </Pressable>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    zIndex: 200,
-    elevation: 28,
-  },
-  pill: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    elevation: 2,
-    overflow: 'hidden',
-  },
-  pillText: { fontSize: 14, fontWeight: '600' },
-  bar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    elevation: 3,
-    overflow: 'hidden',
-  },
-  barPress: { flex: 1 },
-  body: { flex: 1 },
-  title: { fontSize: 15, fontWeight: '700' },
-  meta: { fontSize: 14, fontWeight: '700', marginTop: 2 },
-  sub: { fontSize: 12, marginTop: 2 },
-  endBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  endText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-});

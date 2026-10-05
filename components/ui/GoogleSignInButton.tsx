@@ -12,17 +12,21 @@ import GoogleSetupModal from './GoogleSetupModal';
 import { useTheme } from '../../context/ThemeContext';
 import { useGoogleSignIn } from '../../hooks/useGoogleSignIn';
 import { platformDesign } from '../../constants/platformDesign';
+import { elevationStyle } from '../../utils/platformStyle';
+import { cx, ui } from '../../utils/ui';
 
 type Props = {
   label?: string;
   onSuccess?: () => void;
   style?: StyleProp<ViewStyle>;
+  className?: string;
 };
 
 export default function GoogleSignInButton({
   label = 'Continue with Google',
   onSuccess,
   style,
+  className,
 }: Props) {
   const { theme } = useTheme();
   const { colors } = theme;
@@ -43,13 +47,14 @@ export default function GoogleSignInButton({
       <GlowPressable
         onPress={handlePress}
         disabled={loading}
+        className={cx('btn-google', loading && 'is-loading', className)}
         style={[
           styles.button,
           {
             backgroundColor: colors.surface,
             borderColor: colors.border,
             borderRadius: platformDesign.button.radius,
-            elevation: platformDesign.button.elevation,
+            ...elevationStyle(platformDesign.button.elevation),
           },
           style,
         ]}
@@ -60,10 +65,12 @@ export default function GoogleSignInButton({
           <>
             <Image
               source={require('../../assets/images/google.png')}
-              style={styles.icon}
+              {...ui('btn-google-icon', styles.icon)}
               resizeMode="contain"
             />
-            <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+            <Text {...ui('btn-google-label', [styles.label, { color: colors.text }])}>
+              {label}
+            </Text>
           </>
         )}
       </GlowPressable>

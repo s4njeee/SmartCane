@@ -3,14 +3,23 @@ import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { Alert, BackHandler, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useRef } from "react";
+import { Alert, BackHandler, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { radius, spacing } from "../../constants/theme";
 import { platformDesign } from "../../constants/platformDesign";
 import { useTheme } from "../../context/ThemeContext";
+import { useOnlineStatus } from "../../hooks/useOnlineStatus";
 import { sheetBodyPadding, sheetBottomInset } from "../../utils/layoutInsets";
+import { colorId, cx, isWeb, ui, uiWeb, webClassStyle } from "../../utils/ui";
+
+function batteryLevelClass(battery: number) {
+  if (battery > 50) return "is-ok";
+  if (battery > 20) return "is-low";
+  return "is-crit";
+}
 import { CaneItem } from "../../firebase/appData";
+import { displayPlace } from "../../utils/geoPlace";
 import AppButton from "./AppButton";
 import AppInput from "./AppInput";
 import GlassCard from "./GlassCard";
@@ -22,6 +31,7 @@ type Props = {
   onClose: () => void;
   canes: CaneItem[];
   selectedCane: CaneItem | null;
+  caneAddress?: string;
   onSelectCane: (cane: CaneItem) => void;
   onRemoveCane: (id: string) => void;
   onAddCane: (
@@ -36,6 +46,8 @@ const STATUS_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   "PIR Motion Sensor": "walk-outline",
   GPS: "navigate-outline",
   Location: "location-outline",
+  "Voice command": "mic-outline",
+  "Obstacles Ahead": "alert-circle-outline",
 };
 
 export default function StatusSheet({
@@ -43,17 +55,20 @@ export default function StatusSheet({
   onClose,
   canes,
   selectedCane,
+  caneAddress,
   onSelectCane,
   onRemoveCane,
   onAddCane,
 }: Props) {
   const { theme } = useTheme();
   const { colors } = theme;
+  const isOnline = useOnlineStatus();
+  const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<BottomSheet>(null);
-  const snapPoints = useMemo(() => ["48%", "90%"], []);
   const scrollBottom = sheetBodyPadding();
   const bottomInset = sheetBottomInset(insets);
+  const maxSheetHeight = Math.max(240, windowHeight - insets.top - bottomInset);
 
   const [showAddForm, setShowAddForm] = React.useState(false);
   const [addingCane, setAddingCane] = React.useState(false);
@@ -131,27 +146,33 @@ export default function StatusSheet({
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}
-        opacity={0.5}
+        opacity={0}
         pressBehavior="close"
+        style={[props.style, { bottom: bottomInset }]}
       />
     ),
-    [],
+    [bottomInset],
   );
 
   return (
-    <BottomSheet
+      <BottomSheet
       ref={sheetRef}
       index={-1}
-      snapPoints={snapPoints}
+      enableDynamicSizing
+      maxDynamicContentSize={maxSheetHeight}
       topInset={insets.top}
       bottomInset={bottomInset}
       enablePanDownToClose
-      enableContentPanningGesture={platformDesign.sheet.contentPanning}
+      enableContentPanningGesture
       keyboardBehavior="interactive"
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
       onChange={handleSheetChange}
       backdropComponent={renderBackdrop}
+      containerStyle={{
+        pointerEvents: visible ? "box-none" : "none",
+        bottom: bottomInset,
+      }}
       backgroundStyle={[
         styles.sheetBg,
         {
@@ -167,45 +188,48 @@ export default function StatusSheet({
         width: platformDesign.sheet.handleWidth,
         height: 4,
       }}
-      style={styles.sheet}
+      {...ui("status-sheet", styles.sheet)}
     >
 
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <View style={styles.titleRow}>
+      <View {...ui("status-header", styles.header)}>
+        <View {...ui("status-header-text", styles.headerText)}>
+          <View {...ui("status-title-row", styles.titleRow)}>
             <View
-              style={[
+              {...ui("status-title-icon", [
                 styles.titleIcon,
                 { backgroundColor: colors.primary + "18" },
-              ]}
+              ])}
             >
-              <Ionicons name="pulse" size={18} color={colors.primary} />
+              <Ionicons
+                name="pulse"
+                size={18}
+                color={isWeb ? undefined : colors.primary}
+                style={isWeb ? webClassStyle("status-title-glyph") : undefined}
+              />
             </View>
             <Text
-              style={[
+              {...ui("status-title", [
                 styles.title,
                 {
                   color: colors.text,
                   fontWeight: platformDesign.typography.screenTitleWeight,
                 },
-              ]}
+              ])}
             >
               Cane Status
             </Text>
           </View>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Swipe up to expand · scroll anywhere inside
-          </Text>
         </View>
-        <View style={styles.headerActions}>
+        <View {...ui("status-header-actions", styles.headerActions)}>
           <GlowPressable
             onPress={() => setShowAddForm(!showAddForm)}
             glowColor={colors.success}
             active={showAddForm}
+            className="status-icon-btn is-add"
             style={[
               styles.iconBtn,
               {
-                backgroundColor: colors.success + '18',
+                backgroundColor: colors.success + "18",
                 borderRadius: 12,
               },
             ]}
@@ -213,12 +237,14 @@ export default function StatusSheet({
             <Ionicons
               name={showAddForm ? "remove" : "add"}
               size={22}
-              color={colors.success}
+              color={isWeb ? undefined : colors.success}
+              style={isWeb ? webClassStyle("status-add-glyph") : undefined}
             />
           </GlowPressable>
           <GlowPressable
             onPress={onClose}
             glowColor={colors.textMuted}
+            className="status-icon-btn is-close"
             style={[
               styles.iconBtn,
               {
@@ -227,7 +253,12 @@ export default function StatusSheet({
               },
             ]}
           >
-            <Ionicons name="close" size={20} color={colors.textSecondary} />
+            <Ionicons
+              name="close"
+              size={20}
+              color={isWeb ? undefined : colors.textSecondary}
+              style={isWeb ? webClassStyle("status-close-glyph") : undefined}
+            />
           </GlowPressable>
         </View>
       </View>
@@ -238,7 +269,7 @@ export default function StatusSheet({
         keyboardShouldPersistTaps="handled"
       >
         {showAddForm && (
-          <GlassCard style={styles.formCard} elevated={false}>
+          <GlassCard className="status-form-card" style={styles.formCard} elevated={false}>
             <AppInput
               label="Username"
               value={newUsername}
@@ -287,13 +318,12 @@ export default function StatusSheet({
                     caneID: newCaneID.trim().toUpperCase(),
                     number: newNumber.trim(),
                   });
-                  // Wrong Cane ID or other backend error: do NOT clear form / auto-add
                   if (added === false) {
                     setFieldErrors((prev) => ({
                       ...prev,
                       caneID:
                         prev.caneID ||
-                        "Wrong Cane ID. Use a registered ID (e.g. SC001).",
+                        "Wrong Cane ID. Enter the exact ID printed on your cane device.",
                     }));
                     return;
                   }
@@ -311,15 +341,16 @@ export default function StatusSheet({
         )}
 
         <SectionLabel
+          className="section-label-row is-first"
           style={styles.firstSection}
           trailing={
             <View
-              style={[
+              {...ui("status-count-pill", [
                 styles.countPill,
                 { backgroundColor: colors.primary + "15" },
-              ]}
+              ])}
             >
-              <Text style={[styles.countText, { color: colors.primary }]}>
+              <Text {...ui("status-count-text", [styles.countText, { color: colors.primary }])}>
                 {canes.length}
               </Text>
             </View>
@@ -329,12 +360,17 @@ export default function StatusSheet({
         </SectionLabel>
 
         {canes.length === 0 && (
-          <GlassCard elevated={false} style={styles.emptyCard}>
-            <View style={[styles.emptyIcon, { backgroundColor: colors.primary + "15" }]}>
-              <Ionicons name="accessibility" size={24} color={colors.primary} />
+          <GlassCard elevated={false} className="status-empty-card" style={styles.emptyCard}>
+            <View {...ui("status-empty-icon", [styles.emptyIcon, { backgroundColor: colors.primary + "15" }])}>
+              <Ionicons
+                name="accessibility"
+                size={24}
+                color={isWeb ? undefined : colors.primary}
+                style={isWeb ? webClassStyle("status-empty-glyph") : undefined}
+              />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No canes yet</Text>
-            <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+            <Text {...ui("status-empty-title", [styles.emptyTitle, { color: colors.text }])}>No canes yet</Text>
+            <Text {...ui("status-empty-text", [styles.emptyText, { color: colors.textMuted }])}>
               Tap + to add a registered SmartCane device.
             </Text>
           </GlassCard>
@@ -355,6 +391,7 @@ export default function StatusSheet({
               onPress={() => onSelectCane(cane)}
               glowColor={selected ? colors.primary : colors.accent}
               active={selected}
+              className={cx("cane-card", colorId(cane.id), selected && "is-selected")}
               style={[
                 styles.caneCard,
                 {
@@ -365,91 +402,108 @@ export default function StatusSheet({
                 },
               ]}
             >
-              <View style={styles.caneRow}>
-                <View style={styles.caneLeft}>
+              <View {...ui(cx("cane-row", colorId(cane.id)), styles.caneRow)}>
+                <View {...ui(cx("cane-left", colorId(cane.id)), styles.caneLeft)}>
                   <View
-                    style={[
+                    {...ui(cx("cane-avatar", colorId(cane.id)), [
                       styles.avatarCircle,
                       {
                         backgroundColor: colors.primary + "22",
                         borderColor: colors.primary + "40",
                       },
-                    ]}
+                    ])}
                   >
                     <Text
-                      style={[styles.avatarLetter, { color: colors.primary }]}
+                      {...ui(cx("cane-avatar-letter", colorId(cane.id)), [styles.avatarLetter, { color: colors.primary }])}
                     >
                       {cane.username.charAt(0)}
                     </Text>
                     <View
-                      style={[
-                        styles.statusDot,
-                        {
-                          backgroundColor: cane.connected
-                            ? colors.success
-                            : colors.danger,
-                          borderColor: colors.surface,
-                        },
-                      ]}
+                      {...ui(
+                        cx("cane-status-dot", cane.connected ? "is-on" : "is-off"),
+                        [
+                          styles.statusDot,
+                          {
+                            backgroundColor: cane.connected
+                              ? colors.success
+                              : colors.danger,
+                            borderColor: colors.surface,
+                          },
+                        ],
+                      )}
                     />
                   </View>
-                  <View style={styles.caneInfo}>
-                    <View style={styles.caneNameRow}>
-                      <Text style={[styles.caneName, { color: colors.text }]}>
+                  <View {...ui("cane-info", styles.caneInfo)}>
+                    <View {...ui("cane-name-row", styles.caneNameRow)}>
+                      <Text {...ui(cx("cane-name", colorId(cane.id)), [styles.caneName, { color: colors.text }])}>
                         {cane.username}
                       </Text>
                       {selected && (
                         <View
-                          style={[
+                          {...ui("cane-selected-badge", [
                             styles.selectedBadge,
                             { backgroundColor: colors.primary + "20" },
-                          ]}
+                          ])}
                         >
                           <Ionicons
                             name="checkmark-circle"
                             size={14}
-                            color={colors.primary}
+                            color={isWeb ? undefined : colors.primary}
+                            style={isWeb ? webClassStyle(cx("cane-check-glyph", colorId(cane.id))) : undefined}
                           />
                         </View>
                       )}
                     </View>
                     <Text
-                      style={[styles.caneMeta, { color: colors.textSecondary }]}
+                      {...ui("cane-meta", [styles.caneMeta, { color: colors.textSecondary }])}
                     >
                       {cane.caneID} · {cane.number}
-                      {!cane.connected ? " · Offline" : ""}
                     </Text>
-                    <View style={styles.batteryRow}>
+                    <Text
+                      {...ui("cane-meta", [styles.caneMeta, { color: colors.textSecondary }])}
+                    >
+                      {cane.connected ? "Cane online" : "Cane offline"}
+                      {" · "}
+                      {cane.eyeglassConnected ? "Eyeglass online" : "Eyeglass offline"}
+                    </Text>
+                    <View {...ui("cane-battery-row", styles.batteryRow)}>
                       {cane.connected ? (
                         <>
                           <View
-                            style={[
+                            {...ui("cane-battery-track", [
                               styles.batteryTrack,
                               { backgroundColor: colors.border },
-                            ]}
+                            ])}
                           >
                             <View
-                              style={[
-                                styles.batteryFill,
-                                {
-                                  width: `${cane.battery}%`,
-                                  backgroundColor: batteryColor,
-                                },
-                              ]}
+                              {...uiWeb(
+                                cx("cane-battery-fill", batteryLevelClass(cane.battery)),
+                                { width: `${cane.battery}%` },
+                                [
+                                  styles.batteryFill,
+                                  {
+                                    width: `${cane.battery}%`,
+                                    backgroundColor: batteryColor,
+                                  },
+                                ],
+                              )}
                             />
                           </View>
                           <Text
-                            style={[styles.batteryText, { color: batteryColor }]}
+                            {...ui(
+                              cx("cane-battery-text", batteryLevelClass(cane.battery)),
+                              [styles.batteryText, { color: batteryColor }],
+                            )}
                           >
                             {cane.battery}%
                           </Text>
                         </>
                       ) : (
                         <Text
-                          style={[
+                          {...ui("cane-battery-text is-off", [
                             styles.batteryText,
                             { color: colors.textMuted, minWidth: undefined },
-                          ]}
+                          ])}
                         >
                           Offline
                         </Text>
@@ -460,6 +514,7 @@ export default function StatusSheet({
                 <GlowPressable
                   onPress={() => confirmDelete(cane)}
                   glowColor={colors.danger}
+                  className="cane-delete"
                   style={[
                     styles.deleteBtn,
                     { backgroundColor: colors.dangerSoft, borderRadius: 12 },
@@ -468,7 +523,8 @@ export default function StatusSheet({
                   <Ionicons
                     name="trash-outline"
                     size={18}
-                    color={colors.danger}
+                    color={isWeb ? undefined : colors.danger}
+                    style={isWeb ? webClassStyle(cx("cane-delete-glyph", colorId(cane.id))) : undefined}
                   />
                 </GlowPressable>
               </View>
@@ -478,50 +534,64 @@ export default function StatusSheet({
 
         {selectedCane && (
           <>
-            <SectionLabel>{`${selectedCane.username} Details`}</SectionLabel>
+            <SectionLabel>{`Cane · ${selectedCane.caneID || selectedCane.username}`}</SectionLabel>
 
-            {!selectedCane.connected && (
+            {(!selectedCane.connected || !isOnline) && (
               <View
-                style={[
+                {...ui("status-offline-banner", [
                   styles.offlineBanner,
                   {
                     backgroundColor: colors.dangerSoft || colors.danger + "18",
                     borderColor: colors.danger + "45",
                   },
-                ]}
+                ])}
               >
-                <View style={[styles.offlineIcon, { backgroundColor: colors.danger + "20" }]}>
-                  <Ionicons name="cloud-offline-outline" size={18} color={colors.danger} />
+                <View {...ui("status-offline-icon", [styles.offlineIcon, { backgroundColor: colors.danger + "20" }])}>
+                  <Ionicons
+                    name="cloud-offline-outline"
+                    size={18}
+                    color={isWeb ? undefined : colors.danger}
+                    style={isWeb ? webClassStyle("status-offline-glyph") : undefined}
+                  />
                 </View>
-                <View style={styles.offlineCopy}>
-                  <Text style={[styles.offlineTitle, { color: colors.danger }]}>
-                    Device offline
+                <View {...ui("status-offline-copy", styles.offlineCopy)}>
+                  <Text {...ui("status-offline-title", [styles.offlineTitle, { color: colors.danger }])}>
+                    {!isOnline ? "No internet" : "Cane offline"}
                   </Text>
-                  <Text style={[styles.offlineBannerText, { color: colors.danger }]}>
-                    All sensors are offline until the cane reconnects.
+                  <Text {...ui("status-offline-text", [styles.offlineBannerText, { color: colors.danger }])}>
+                    {!isOnline
+                      ? "Map keeps last cane GPS. Phone GPS still tracks you."
+                      : selectedCane.eyeglassConnected
+                        ? "Cane Wi-Fi is down. Eyeglass can still show online on its own."
+                        : "Cane sensors pause until this cane reconnects to Wi-Fi."}
                   </Text>
                 </View>
               </View>
             )}
 
-            <GlassCard elevated={false} style={styles.statusGroup}>
+            <GlassCard elevated={false} className="status-group" style={styles.statusGroup}>
               <StatusRow
+                id="cane-connected"
                 label="Connected"
                 value={selectedCane.connected ? "Online" : "Offline"}
                 ok={selectedCane.connected}
                 colors={colors}
               />
-              <View style={[styles.statusDivider, { backgroundColor: colors.border }]} />
+              <View {...ui("status-divider", [styles.statusDivider, { backgroundColor: colors.border }])} />
               <StatusRow
+                id="cane-battery"
                 label="Battery"
                 value={
-                  selectedCane.connected ? `${selectedCane.battery}%` : "Offline"
+                  selectedCane.connected
+                    ? `${selectedCane.battery}%`
+                    : "Offline"
                 }
                 ok={selectedCane.connected ? undefined : false}
                 colors={colors}
               />
-              <View style={[styles.statusDivider, { backgroundColor: colors.border }]} />
+              <View {...ui("status-divider", [styles.statusDivider, { backgroundColor: colors.border }])} />
               <StatusRow
+                id="cane-ultrasonic"
                 label="Ultrasonic Sensor"
                 value={
                   !selectedCane.connected
@@ -535,8 +605,9 @@ export default function StatusSheet({
                 }
                 colors={colors}
               />
-              <View style={[styles.statusDivider, { backgroundColor: colors.border }]} />
+              <View {...ui("status-divider", [styles.statusDivider, { backgroundColor: colors.border }])} />
               <StatusRow
+                id="cane-pir"
                 label="PIR Motion Sensor"
                 value={
                   !selectedCane.connected
@@ -548,29 +619,95 @@ export default function StatusSheet({
                 ok={selectedCane.connected ? !selectedCane.motion : false}
                 colors={colors}
               />
-              <View style={[styles.statusDivider, { backgroundColor: colors.border }]} />
+              <View {...ui("status-divider", [styles.statusDivider, { backgroundColor: colors.border }])} />
               <StatusRow
+                id="cane-gps"
                 label="GPS"
                 value={
-                  !selectedCane.connected
-                    ? "Offline"
-                    : selectedCane.gps
-                      ? "Active"
+                  selectedCane.connected && selectedCane.gps
+                    ? "Active"
+                    : selectedCane.routes[0]
+                      ? "Last known"
                       : "Offline"
                 }
-                ok={selectedCane.connected && selectedCane.gps}
+                ok={
+                  selectedCane.connected
+                    ? selectedCane.gps
+                    : Boolean(selectedCane.routes[0])
+                }
                 colors={colors}
               />
-              <View style={[styles.statusDivider, { backgroundColor: colors.border }]} />
+              <View {...ui("status-divider", [styles.statusDivider, { backgroundColor: colors.border }])} />
               <StatusRow
+                id="cane-location"
                 label="Location"
-                value={
-                  !selectedCane.connected
-                    ? "Offline"
-                    : selectedCane.routes[0]?.address || "Locating..."
-                }
-                ok={selectedCane.connected ? undefined : false}
+                value={displayPlace(
+                  selectedCane.routes[0]?.address || caneAddress,
+                  selectedCane.connected ? "Locating..." : "Last known",
+                )}
+                ok={selectedCane.connected ? undefined : Boolean(selectedCane.routes[0])}
                 wide
+                colors={colors}
+              />
+            </GlassCard>
+
+            <SectionLabel>{`Eyeglass · ${selectedCane.caneID || selectedCane.username || "—"}`}</SectionLabel>
+            <GlassCard elevated={false} className="status-group" style={styles.statusGroup}>
+              <StatusRow
+                id="glass-connected"
+                label="Connected"
+                value={selectedCane.eyeglassConnected ? "Online" : "Offline"}
+                ok={Boolean(selectedCane.eyeglassConnected)}
+                colors={colors}
+              />
+              <View {...ui("status-divider", [styles.statusDivider, { backgroundColor: colors.border }])} />
+              <StatusRow
+                id="glass-voice"
+                label="Voice command"
+                value={
+                  selectedCane.eyeglassConnected
+                    ? selectedCane.eyeglassVoice || "On"
+                    : "Offline"
+                }
+                ok={
+                  selectedCane.eyeglassConnected
+                    ? selectedCane.eyeglassVoice !== "Off"
+                    : false
+                }
+                colors={colors}
+              />
+              <View {...ui("status-divider", [styles.statusDivider, { backgroundColor: colors.border }])} />
+              <StatusRow
+                id="glass-obstacles"
+                label="Obstacles Ahead"
+                value={
+                  !selectedCane.eyeglassConnected
+                    ? "Offline"
+                    : selectedCane.eyeglassObstacle
+                      ? "Ahead"
+                      : "Clear"
+                }
+                ok={
+                  selectedCane.eyeglassConnected
+                    ? !selectedCane.eyeglassObstacle
+                    : false
+                }
+                colors={colors}
+              />
+              <View {...ui("status-divider", [styles.statusDivider, { backgroundColor: colors.border }])} />
+              <StatusRow
+                id="glass-battery"
+                label="Battery"
+                value={
+                  !selectedCane.eyeglassConnected
+                    ? "Offline"
+                    : `${Math.max(0, Math.round(selectedCane.eyeglassBattery ?? 0))}%`
+                }
+                ok={
+                  selectedCane.eyeglassConnected
+                    ? (selectedCane.eyeglassBattery ?? 0) > 15
+                    : false
+                }
                 colors={colors}
               />
             </GlassCard>
@@ -578,61 +715,65 @@ export default function StatusSheet({
             <SectionLabel>Route History</SectionLabel>
 
             {selectedCane.routes.length === 0 ? (
-              <GlassCard elevated={false} style={styles.emptyCard}>
-                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+              <GlassCard elevated={false} className="status-empty-card" style={styles.emptyCard}>
+                <Text {...ui("status-empty-text", [styles.emptyText, { color: colors.textMuted }])}>
                   No route history yet.
                 </Text>
               </GlassCard>
             ) : (
-              selectedCane.routes.map(
-                (route: { address?: string; time: string }, index: number) => (
+              selectedCane.routes.slice(0, 8).map(
+                (route: { address?: string; time: string }, index: number, list) => (
                   <View
                     key={index}
-                    style={[
+                    {...ui("status-history-card", [
                       styles.historyCard,
                       {
                         backgroundColor: colors.cardAlt,
                         borderColor: colors.border,
                       },
-                    ]}
+                    ])}
                   >
-                    <View style={styles.timeline}>
+                    <View {...ui("status-timeline", styles.timeline)}>
                       <View
-                        style={[
+                        {...ui("status-timeline-dot", [
                           styles.timelineDot,
                           {
                             backgroundColor: colors.primary,
                             borderColor: colors.surface,
                           },
-                        ]}
+                        ])}
                       />
-                      {index < selectedCane.routes.length - 1 && (
+                      {index < list.length - 1 && (
                         <View
-                          style={[
+                          {...ui("status-timeline-line", [
                             styles.timelineLine,
                             { backgroundColor: colors.border },
-                          ]}
+                          ])}
                         />
                       )}
                     </View>
                     <View
-                      style={[
+                      {...ui("status-history-icon", [
                         styles.historyIcon,
                         { backgroundColor: colors.primary + "15" },
-                      ]}
+                      ])}
                     >
                       <Ionicons
                         name="location"
                         size={15}
-                        color={colors.primary}
+                        color={isWeb ? undefined : colors.primary}
+                        style={isWeb ? webClassStyle(cx("status-history-glyph", colorId(`route-${index}`))) : undefined}
                       />
                     </View>
-                    <View style={styles.historyBody}>
-                      <Text style={[styles.historyAddr, { color: colors.text }]}>
-                        {route.address || "Unknown"}
+                    <View {...ui("status-history-body", styles.historyBody)}>
+                      <Text {...ui("status-history-addr", [styles.historyAddr, { color: colors.text }])}>
+                        {displayPlace(
+                          route.address,
+                          selectedCane.connected ? "Locating..." : "Last known",
+                        )}
                       </Text>
                       <Text
-                        style={[styles.historyMeta, { color: colors.textMuted }]}
+                        {...ui("status-history-meta", [styles.historyMeta, { color: colors.textMuted }])}
                       >
                         {route.time}
                       </Text>
@@ -649,12 +790,14 @@ export default function StatusSheet({
 }
 
 function StatusRow({
+  id,
   label,
   value,
   ok,
   wide,
   colors,
 }: {
+  id: string;
   label: string;
   value: string;
   ok?: boolean;
@@ -664,31 +807,38 @@ function StatusRow({
   const icon = STATUS_ICONS[label] || "information-circle-outline";
   const valueColor =
     ok !== undefined ? (ok ? colors.success : colors.danger) : colors.text;
+  const tone = ok === undefined ? "is-neutral" : ok ? "is-ok" : "is-bad";
+  const mark = colorId(id);
 
   return (
-    <View style={styles.statusRow}>
-      <View style={styles.statusLeft}>
+    <View {...ui(cx("status-row", mark), styles.statusRow)}>
+      <View {...ui(cx("status-row-left", mark), styles.statusLeft)}>
         <View
-          style={[
+          {...ui(cx("status-row-icon", mark, tone), [
             styles.statusIconWrap,
             { backgroundColor: valueColor + "18" },
-          ]}
+          ])}
         >
-          <Ionicons name={icon} size={16} color={valueColor} />
+          <Ionicons
+            name={icon}
+            size={16}
+            color={isWeb ? undefined : valueColor}
+            style={isWeb ? webClassStyle(cx("status-row-glyph", mark, tone)) : undefined}
+          />
         </View>
-        <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>
+        <Text {...ui(cx("status-row-label", mark), [styles.statusLabel, { color: colors.textSecondary }])}>
           {label}
         </Text>
       </View>
       <View
-        style={[
+        {...ui(cx("status-value-pill", mark, tone, wide && "is-wide"), [
           styles.valuePill,
           { backgroundColor: valueColor + "15" },
           wide && styles.valuePillWide,
-        ]}
+        ])}
       >
         <Text
-          style={[styles.statusValue, { color: valueColor }]}
+          {...ui(cx("status-value", mark, tone), [styles.statusValue, { color: valueColor }])}
           numberOfLines={wide ? 2 : 1}
         >
           {value}
@@ -699,13 +849,13 @@ function StatusRow({
 }
 
 const styles = StyleSheet.create({
-  sheet: { zIndex: 120, elevation: 24 },
+  sheet: { zIndex: 80, elevation: 0 },
   sheetBg: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 2,
   },
   header: {
     flexDirection: "row",
@@ -725,7 +875,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: { fontSize: 18, letterSpacing: -0.2 },
-  subtitle: { fontSize: 12, marginTop: 4, lineHeight: 16 },
   headerActions: { flexDirection: "row", gap: 10 },
   iconBtn: {
     width: 48,

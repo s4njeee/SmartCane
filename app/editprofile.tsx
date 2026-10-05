@@ -14,6 +14,7 @@ import AppInput from '../components/ui/AppInput';
 import AppButton from '../components/ui/AppButton';
 import { useTheme } from '../context/ThemeContext';
 import { radius, spacing } from '../constants/theme';
+import { cx, ui } from '../utils/ui';
 
 export default function EditProfileScreen() {
   const router = useRouter();
@@ -82,14 +83,15 @@ export default function EditProfileScreen() {
         <AppInput label="Phone number" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
         <AppInput label="Age" value={age} onChangeText={setAge} keyboardType="numeric" />
 
-        <Text style={[styles.genderLabel, { color: colors.textSecondary }]}>Gender</Text>
-        <View style={styles.genderRow}>
+        <Text {...ui('gender-label', [styles.genderLabel, { color: colors.textSecondary }])}>Gender</Text>
+        <View {...ui('gender-row', styles.genderRow)}>
           {['Male', 'Female', 'Other'].map((item) => (
             <GlowPressable
               key={item}
               onPress={() => setGender(item)}
               active={gender === item}
               glowColor={colors.primary}
+              className={cx('gender-btn', gender === item && 'is-active')}
               style={[
                 styles.genderBtn,
                 {
@@ -101,10 +103,10 @@ export default function EditProfileScreen() {
               ]}
             >
               <Text
-                style={[
+                {...ui('gender-text', [
                   styles.genderText,
                   { color: gender === item ? '#fff' : colors.text },
-                ]}
+                ])}
               >
                 {item}
               </Text>
@@ -113,7 +115,7 @@ export default function EditProfileScreen() {
         </View>
       </GlassCard>
 
-      <AppButton title="Save Changes" onPress={handleSave} loading={loading} style={styles.save} />
+      <AppButton title="Save Changes" onPress={handleSave} loading={loading} className="form-save" style={styles.save} />
     </ScreenLayout>
     </AppShell>
   );

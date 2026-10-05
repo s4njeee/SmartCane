@@ -1,5 +1,6 @@
 type LatLng = { latitude: number; longitude: number };
 
+export type TravelMode = "driving" | "foot" | "motorcycle";
 export type TravelProfile = "driving" | "foot" | "cycling";
 
 export type RoadRouteResult = {
@@ -10,6 +11,27 @@ export type RoadRouteResult = {
 };
 
 const FETCH_TIMEOUT_MS = 12000;
+
+/** Urban averages (km/h). Caregiver trips to a nearby cane are city-scale. */
+const SPEED_KMH: Record<TravelMode, number> = {
+  driving: 32,
+  motorcycle: 45,
+  foot: 5,
+};
+
+/** OSRM has no motorcycle profile — moto uses the same roads as a car. */
+export function osrmProfileForMode(mode: TravelMode): TravelProfile {
+  return mode === "foot" ? "foot" : "driving";
+}
+
+/** Minutes come from road (or map) distance × typical speed for the mode. */
+export function durationFromDistance(
+  meters: number,
+  mode: TravelMode
+): number {
+  if (!Number.isFinite(meters) || meters <= 0) return 0;
+  return (meters / 1000) * (3600 / SPEED_KMH[mode]);
+}
 
 function roundCoord(value: number, digits = 4) {
   const f = 10 ** digits;
@@ -120,33 +142,36 @@ async function requestOsrm(
 export async function fetchRoadRoute(
   from: LatLng,
   to: LatLng,
-  profile: TravelProfile = "driving"
+  mode: TravelMode = "driving"
 ): Promise<RoadRouteResult | null> {
-  const { primary } = await requestOsrm(from, to, profile, false);
-  if (primary?.points && primary.points.length > 2) return primary;
+  const profile = osrmProfileForMode(mode);
+  let primary = (await requestOsrm(from, to, profile, false)).primary;
 
-  if (profile !== "driving") {
-    const drive = await requestOsrm(from, to, "driving", false);
-    if (drive.primary?.points && drive.primary.points.length > 2) {
-      return drive.primary;
+  if (!primary?.points || primary.points.length <= 2) {
+    if (profile !== "driving") {
+      primary = (await requestOsrm(from, to, "driving", false)).primary;
     }
   }
-  if (profile !== "foot") {
-    const foot = await requestOsrm(from, to, "foot", false);
-    if (foot.primary?.points && foot.primary.points.length > 2) {
-      return foot.primary;
+  if (!primary?.points || primary.points.length <= 2) {
+    if (profile !== "foot") {
+      primary = (await requestOsrm(from, to, "foot", false)).primary;
     }
   }
-  return null;
+  if (!primary?.points || primary.points.length <= 2) return null;
+
+  return {
+    ...primary,
+    durationSeconds: durationFromDistance(primary.distanceMeters, mode),
+  };
 }
 
 /** Primary + up to 2 alternate routes. */
 export async function fetchRoadRoutes(
   from: LatLng,
   to: LatLng,
-  profile: TravelProfile = "driving"
+  mode: TravelMode = "driving"
 ): Promise<{ primary: RoadRouteResult | null; alternatives: RoadRouteResult[] }> {
-  const single = await fetchRoadRoute(from, to, profile);
+  const single = await fetchRoadRoute(from, to, mode);
   if (single?.points && single.points.length > 2) {
     return { primary: single, alternatives: [] };
   }
@@ -169,8 +194,9 @@ export function pickWaypoints(points: LatLng[], maxDots = 12): LatLng[] {
 export function routeCacheKey(
   from: LatLng,
   to: LatLng,
-  profile: TravelProfile = "driving"
+  mode: TravelMode = "driving"
 ) {
+  const profile = osrmProfileForMode(mode);
   return `${profile}:${roundCoord(from.latitude)},${roundCoord(from.longitude)}->${roundCoord(to.latitude)},${roundCoord(to.longitude)}`;
 }
 
@@ -178,17 +204,25 @@ export function routeCacheKey(
 export function routeFetchKey(
   from: LatLng,
   to: LatLng,
-  profile: TravelProfile = "driving"
+  mode: TravelMode = "driving"
 ) {
+  const profile = osrmProfileForMode(mode);
   return `${profile}:${roundCoord(from.latitude, 3)},${roundCoord(from.longitude, 3)}->${roundCoord(to.latitude, 3)},${roundCoord(to.longitude, 3)}`;
 }
 
-export function formatDuration(seconds: number) {
-  const mins = Math.max(1, Math.round(seconds / 60));
-  if (mins < 60) return `${mins} min`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m ? `${h} hr ${m} min` : `${h} hr`;
+export function formatDuration(totalSeconds: number) {
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return "—";
+  const sec = Math.max(1, Math.round(totalSeconds));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+
+  const parts: string[] = [];
+  if (h > 0) parts.push(`${h} Hr`);
+  if (m > 0) parts.push(`${m} Mins`);
+  if (s > 0) parts.push(`${s} Sec`);
+  if (parts.length === 0) return "1 Sec";
+  return parts.join(" ");
 }
 
 /** Midpoint along a path (for ETA callout). */

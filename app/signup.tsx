@@ -21,6 +21,7 @@ import GoogleSignInButton from '../components/ui/GoogleSignInButton';
 import ThemeToggle from '../components/ui/ThemeToggle';
 import { useTheme } from '../context/ThemeContext';
 import { spacing } from '../constants/theme';
+import { ui } from '../utils/ui';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -72,12 +73,12 @@ export default function SignupScreen() {
 
   const content = (
     <ScreenLayout scroll contentStyle={styles.content}>
-      <View style={styles.topRow}>
+      <View {...ui('auth-top-row', styles.topRow)}>
         <ThemeToggle />
       </View>
-      <Image source={require('../assets/images/SmartGuide.png')} style={styles.logo} resizeMode="contain" />
-      <Text style={[styles.title, { color: colors.text }]}>Create account</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+      <Image source={require('../assets/images/SmartGuide.png')} {...ui('auth-logo', styles.logo)} resizeMode="contain" />
+      <Text {...ui('text-title-lg is-signup', [styles.title, { color: colors.text }])}>Create account</Text>
+      <Text {...ui('auth-subtitle is-signup', [styles.subtitle, { color: colors.textSecondary }])}>
         Set up your SmartGuide profile
       </Text>
 
@@ -119,26 +120,27 @@ export default function SignupScreen() {
 
         <GoogleSignInButton
           label="Sign up with Google"
+          className="btn-google is-input-bg"
           style={{ marginTop: 16, backgroundColor: colors.inputBg }}
           onSuccess={() => router.replace('/home')}
         />
       </GlassCard>
 
-      <Pressable onPress={() => router.replace('/login')} style={styles.loginRow}>
-        <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+      <Pressable onPress={() => router.replace('/login')} {...ui('auth-footer-row', styles.loginRow)}>
+        <Text {...ui('auth-footer-text', [styles.footerText, { color: colors.textSecondary }])}>
           Already have an account?{' '}
-          <Text style={{ color: colors.primary, fontWeight: '700' }}>Log in</Text>
+          <Text {...ui('auth-footer-link', { color: colors.primary, fontWeight: '700' })}>Log in</Text>
         </Text>
       </Pressable>
     </ScreenLayout>
   );
 
   if (Platform.OS === 'android') {
-    return <View style={styles.flex}>{content}</View>;
+    return <View {...ui('flex-1', styles.flex)}>{content}</View>;
   }
 
   return (
-    <KeyboardAvoidingView style={styles.flex} behavior="padding">
+    <KeyboardAvoidingView {...ui('flex-1', styles.flex)} behavior="padding">
       {content}
     </KeyboardAvoidingView>
   );

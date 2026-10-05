@@ -1,27 +1,56 @@
-// Paste into Firebase Console → Firestore → Rules
-// Then click Publish.
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
+      allow read: if isAdmin();
 
       match /canes/{caneId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
+        allow read: if isAdmin();
       }
     }
 
-    match /alerts/{alertId} {
-      allow read: if request.auth != null
-        && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null
-        && resource.data.userId == request.auth.uid;
+    // Collection-group reads (admin cane list) require a recursive wildcard.
+    match /{path=**}/canes/{caneId} {
+      allow read: if isAdmin();
     }
 
-    // Smart cane hardware telemetry (ESP32 + app)
+    match /alerts/{alertId} {
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /problemReports/{reportId} {
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.subject is string
+        && request.resource.data.message is string
+        && request.resource.data.status == 'open';
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
     match /devices/{deviceId} {
       allow read, write: if true;
     }

@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,9 +10,9 @@ import { TabKey } from '../components/ui/BottomTabBar';
 import { useCaneStatus } from '../context/CaneStatusContext';
 import { useNavigation } from '../context/NavigationContext';
 import { useTheme } from '../context/ThemeContext';
-import { platformDesign } from '../constants/platformDesign';
 import { looksLikeCoordinates } from '../utils/geoPlace';
 import { mapBannerTop, tabBarClearance } from '../utils/layoutInsets';
+import { isWeb, ui, webClassStyle } from '../utils/ui';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
@@ -24,6 +23,7 @@ export default function HomeScreen() {
     selectedCane,
     isStatusOpen,
     caneAddress,
+    isOffline,
   } = useCaneStatus();
   const [mapRef, setMapRef] = useState<any>(null);
   const [bannerExpanded, setBannerExpanded] = useState(false);
@@ -83,33 +83,42 @@ export default function HomeScreen() {
   if (!hasMapTarget) {
     return (
       <AppShell active="home" onTabPress={handleTab}>
-        <View style={[styles.loading, { backgroundColor: colors.background }]}>
+        <View {...ui('home-loading', [styles.loading, { backgroundColor: colors.background }])}>
           {showStatusBanner && (
             <View
               pointerEvents="box-none"
               collapsable={false}
-              style={styles.bannerHost}
+              {...ui('banner-layer', styles.bannerHost)}
             >
               <LiveTrackingBanner
                 expanded={bannerExpanded}
                 onToggle={() => setBannerExpanded((prev) => !prev)}
                 caneName={selectedCane?.username}
                 deviceOnline={Boolean(selectedCane?.connected)}
+                eyeglassOnline={Boolean(selectedCane?.eyeglassConnected)}
+                isOffline={isOffline}
                 battery={selectedCane?.battery}
                 address={placeLabel}
               />
             </View>
           )}
-          <View style={[styles.loadingIcon, { backgroundColor: colors.primary + '15' }]}>
-            <Ionicons name="navigate" size={28} color={colors.primary} />
+          <View {...ui('home-loading-icon', [styles.loadingIcon, { backgroundColor: colors.primary + '15' }])}>
+            <Ionicons
+              name="navigate"
+              size={28}
+              color={isWeb ? undefined : colors.primary}
+              style={isWeb ? webClassStyle('home-nav-glyph') : undefined}
+            />
           </View>
-          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 16 }} />
-          <Text style={[styles.loadingTitle, { color: colors.text }]}>
+          <ActivityIndicator size="large" color={colors.primary} {...ui('home-spinner', { marginTop: 16 })} />
+          <Text {...ui('home-loading-title', [styles.loadingTitle, { color: colors.text }])}>
             {selectedCane ? 'Finding your cane' : 'Set up tracking'}
           </Text>
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+          <Text {...ui('home-loading-text', [styles.loadingText, { color: colors.textSecondary }])}>
             {selectedCane
-              ? 'Waiting for GPS fix from the cane…'
+              ? isOffline
+                ? 'No internet. Last cane GPS will show once saved.'
+                : 'Waiting for GPS fix from the cane…'
               : 'Add a cane in Status, or enable phone location'}
           </Text>
         </View>
@@ -119,8 +128,7 @@ export default function HomeScreen() {
 
   return (
     <AppShell active="home" onTabPress={handleTab}>
-      <StatusBar style="dark" />
-      <View style={styles.container}>
+      <View {...ui('home', styles.container)}>
         <CaneMap
           caneLocation={caneLocation}
           phoneLocation={phoneLocation}
@@ -138,19 +146,18 @@ export default function HomeScreen() {
           <View
             pointerEvents="box-none"
             collapsable={false}
-            style={[
-              styles.bannerHost,
-              platformDesign.id === 'android' && styles.bannerHostAndroid,
-            ]}
+            {...ui('banner-layer', styles.bannerHost)}
           >
-            <LiveTrackingBanner
-              expanded={bannerExpanded}
-              onToggle={() => setBannerExpanded((prev) => !prev)}
-              caneName={selectedCane?.username}
-              deviceOnline={Boolean(selectedCane?.connected)}
-              battery={selectedCane?.battery}
-              address={placeLabel}
-            />
+              <LiveTrackingBanner
+                expanded={bannerExpanded}
+                onToggle={() => setBannerExpanded((prev) => !prev)}
+                caneName={selectedCane?.username}
+                deviceOnline={Boolean(selectedCane?.connected)}
+                eyeglassOnline={Boolean(selectedCane?.eyeglassConnected)}
+                isOffline={isOffline}
+                battery={selectedCane?.battery}
+                address={placeLabel}
+              />
           </View>
         )}
       </View>
@@ -163,9 +170,6 @@ const styles = StyleSheet.create({
   bannerHost: {
     ...StyleSheet.absoluteFill,
     zIndex: 20,
-  },
-  bannerHostAndroid: {
-    elevation: 8,
   },
   loading: {
     flex: 1,

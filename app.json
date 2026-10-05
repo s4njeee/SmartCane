@@ -3,7 +3,7 @@
     "name": "SmartCane",
     "slug": "smartcane",
     "owner": "sanjeeee",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
     "scheme": "smartcane",
@@ -36,7 +36,9 @@
     },
     "plugins": [
       "expo-router",
+      "expo-dev-client",
       "expo-web-browser",
+      "@react-native-google-signin/google-signin",
       [
         "expo-navigation-bar",
         {
@@ -72,7 +74,8 @@
           "color": "#DC2626",
           "sounds": []
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -84,6 +87,7 @@
       "googleIosClientId": "",
       "googleAndroidClientId": "",
       "googleMapsApiKey": "",
+      "adminEmails": [],
       "eas": {
         "projectId": "ebba98e7-76a1-42bd-a627-23ae7008ce0e"
       }

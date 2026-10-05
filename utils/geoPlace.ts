@@ -6,6 +6,18 @@ export function looksLikeCoordinates(value?: string | null) {
   return Boolean(value && COORD_ADDRESS.test(value.trim()));
 }
 
+/** Round GPS so nearby pings share one barangay/city lookup. */
+export function placeKey(lat: number, lng: number) {
+  return `${lat.toFixed(4)},${lng.toFixed(4)}`;
+}
+
+/** Barangay + city, or a short fallback — never raw coordinates. */
+export function displayPlace(address?: string | null, fallback = 'Unknown') {
+  const trimmed = address?.trim();
+  if (!trimmed || looksLikeCoordinates(trimmed)) return fallback;
+  return trimmed;
+}
+
 /** Prefer barangay + city (Philippines), then a short fallback. */
 export function formatBarangayCity(place: LocationGeocodedAddress): string {
   const barangay = (

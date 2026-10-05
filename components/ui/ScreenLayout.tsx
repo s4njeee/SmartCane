@@ -3,6 +3,7 @@ import { Keyboard, ScrollView, StyleSheet, View, ViewStyle } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { sheetScrollBottom } from '../../utils/layoutInsets';
+import { cx, ui, uiWeb } from '../../utils/ui';
 
 type Props = {
   children: React.ReactNode;
@@ -13,7 +14,7 @@ type Props = {
   contentStyle?: ViewStyle;
 };
 
-/** Flat screen shell — solid background. */
+/** Flat screen shell — same padding and safe-area on Android and iOS. */
 export default function ScreenLayout({
   children,
   scroll = false,
@@ -30,27 +31,50 @@ export default function ScreenLayout({
     : { paddingBottom: Math.max(insets.bottom, 12) + 24 };
 
   const content = (
-    <View style={[padded && styles.padded, bottomPad, contentStyle]}>{children}</View>
-  );
-
-  const body = scroll ? (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={[styles.scrollGrow, bottomPad]}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag"
-      onScrollBeginDrag={Keyboard.dismiss}
+    <View
+      {...uiWeb(
+        cx(padded && 'screen-padded'),
+        [bottomPad, contentStyle],
+        [padded && styles.padded, bottomPad, contentStyle],
+      )}
     >
-      <View style={[padded && styles.padded, contentStyle]}>{children}</View>
-    </ScrollView>
-  ) : (
-    content
+      {children}
+    </View>
   );
 
   return (
-    <View style={[styles.flex, { backgroundColor: colors.background }, style]}>
-      <SafeAreaView style={styles.flex} edges={['top', 'left', 'right']}>
-        {body}
+    <View
+      {...ui(
+        'screen',
+        [styles.flex, { backgroundColor: colors.background }, style],
+        style,
+      )}
+    >
+      <SafeAreaView {...ui('screen-safe', styles.flex)} edges={['top', 'left', 'right']}>
+        {scroll ? (
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.scrollGrow, bottomPad]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            onScrollBeginDrag={Keyboard.dismiss}
+            nestedScrollEnabled
+            overScrollMode="never"
+            decelerationRate="normal"
+          >
+            <View
+              {...uiWeb(
+                cx(padded && 'screen-padded'),
+                contentStyle,
+                [padded && styles.padded, contentStyle],
+              )}
+            >
+              {children}
+            </View>
+          </ScrollView>
+        ) : (
+          content
+        )}
       </SafeAreaView>
     </View>
   );
@@ -58,6 +82,6 @@ export default function ScreenLayout({
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  padded: { paddingHorizontal: 24, paddingBottom: 24 },
+  padded: { paddingHorizontal: 20, paddingBottom: 20 },
   scrollGrow: { flexGrow: 1 },
 });

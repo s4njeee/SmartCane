@@ -1,4 +1,5 @@
 import { File } from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../firebase/supabase';
 
 const AVATAR_BUCKET = 'avatars';
@@ -50,7 +51,7 @@ export async function uploadAvatarFile(
   const { error } = await supabase.storage.from(AVATAR_BUCKET).upload(fileName, arrayBuffer, {
     upsert: true,
     contentType,
-    cacheControl: '3600',
+    cacheControl: '0',
   });
 
   if (error) {
@@ -68,9 +69,32 @@ export async function uploadAvatarFile(
 export function resolveStoredAvatarUrl(
   firestoreUrl?: string | null,
   storedExtension?: string | null,
-  userId?: string | null
+  userId?: string | null,
+  cacheToken?: string | number | null
 ) {
-  if (firestoreUrl) return firestoreUrl;
-  if (userId && storedExtension) return getAvatarPublicUrl(userId, storedExtension);
-  return null;
+  const raw = firestoreUrl
+    ? firestoreUrl
+    : userId && storedExtension
+      ? getAvatarPublicUrl(userId, storedExtension)
+      : null;
+  if (!raw) return null;
+  if (cacheToken == null || cacheToken === '') return raw;
+  const sep = raw.includes('?') ? '&' : '?';
+  return `${raw}${sep}t=${cacheToken}`;
+}
+
+function avatarCacheKey(userId: string) {
+  return `smartcane_avatar_${userId}`;
+}
+
+export function avatarBaseUrl(url: string) {
+  return url.split('?')[0];
+}
+
+export async function rememberLocalAvatar(userId: string, url: string) {
+  await AsyncStorage.setItem(avatarCacheKey(userId), url);
+}
+
+export async function recallLocalAvatar(userId: string) {
+  return AsyncStorage.getItem(avatarCacheKey(userId));
 }

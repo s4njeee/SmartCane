@@ -1,8 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SystemUI from 'expo-system-ui';
+import * as NavigationBar from 'expo-navigation-bar';
 import { getTheme, type AppTheme } from '../constants/theme';
+import { ui } from '../utils/ui';
 
 type ThemeContextValue = {
   theme: AppTheme;
@@ -13,10 +15,18 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-async function syncAndroidSystemBars(isDark: boolean) {
+async function syncSystemChrome(isDark: boolean) {
+  const page = isDark ? '#0F172A' : '#F8FAFC';
+  try {
+    await SystemUI.setBackgroundColorAsync(page);
+  } catch {
+    /* Expo Go / unsupported */
+  }
   if (Platform.OS !== 'android') return;
   try {
-    await SystemUI.setBackgroundColorAsync(isDark ? '#050A18' : '#ffffff');
+    // SDK 57+: setBackgroundColorAsync / setButtonStyleAsync were removed.
+    // 'dark' = dark bar + light buttons; 'light' = light bar + dark buttons.
+    NavigationBar.setStyle(isDark ? 'dark' : 'light');
   } catch {
     /* Expo Go / unsupported */
   }
@@ -32,7 +42,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    syncAndroidSystemBars(isDark);
+    void syncSystemChrome(isDark);
+  }, [isDark]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
   }, [isDark]);
 
   const setDarkMode = useCallback(async (value: boolean) => {
@@ -44,17 +59,25 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setDarkMode(!isDark);
   }, [isDark, setDarkMode]);
 
+  const theme = useMemo(() => getTheme(isDark), [isDark]);
+
   const value = useMemo(
     () => ({
-      theme: getTheme(isDark, Platform.OS === 'android' ? 'android' : 'ios'),
+      theme,
       isDark,
       toggleTheme,
       setDarkMode,
     }),
-    [isDark, toggleTheme, setDarkMode]
+    [theme, isDark, toggleTheme, setDarkMode]
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>
+      <View {...ui('screen', { flex: 1, backgroundColor: theme.colors.background })}>
+        {children}
+      </View>
+    </ThemeContext.Provider>
+  );
 }
 
 export function useTheme() {

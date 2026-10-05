@@ -49,3 +49,9 @@ app-example
 # generated native folders
 /ios
 /android
+
+# UI inspector open locator + debug session logs
+dev/inspector/.insp-locate.json
+.cursor/
+debug-*.log
+**/debug-*.log

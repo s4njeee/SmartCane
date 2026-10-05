@@ -1,6 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, View } from "react-native";
 import { useTheme } from "../../context/ThemeContext";
+import { isWeb, ui, webClassStyle } from "../../utils/ui";
+import GlowPressable from "./GlowPressable";
+import OsmMapView from "./OsmMapView";
 
 type RoutePoint = { latitude: number; longitude: number };
 
@@ -15,39 +18,67 @@ type Props = {
   caneName?: string;
 };
 
+/** Web uses Leaflet/OSM — react-native-maps (Google) has no browser SDK. */
 export default function CaneMap({
   caneLocation,
   phoneLocation,
   location,
+  mapType = "standard",
+  onToggleMapType,
+  onMapPress,
 }: Props) {
   const { theme } = useTheme();
   const { colors } = theme;
   const point = caneLocation || phoneLocation || location;
 
-  return (
-    <View style={[styles.mapPlaceholder, { backgroundColor: colors.cardAlt }]}>
-      <View
-        style={[styles.iconCircle, { backgroundColor: colors.primary + "18" }]}
-      >
-        <Ionicons name="map-outline" size={40} color={colors.primary} />
-      </View>
-      <Text style={[styles.mapTitle, { color: colors.text }]}>
-        Map view is mobile-only
-      </Text>
-      <Text style={[styles.mapSubtitle, { color: colors.textSecondary }]}>
-        Open this app in Expo Go on your phone. Tap the cane marker for
-        Directions — Drive, Walk, or Cycle to the cane.
-      </Text>
-      {point && (
-        <Text style={[styles.coords, { color: colors.textMuted }]}>
-          Lat: {point.latitude.toFixed(5)} · Long: {point.longitude.toFixed(5)}
+  if (!point) {
+    return (
+      <View {...ui("map-placeholder", [styles.mapPlaceholder, { backgroundColor: colors.cardAlt }])}>
+        <View
+          {...ui("map-icon-circle", [styles.iconCircle, { backgroundColor: colors.primary + "18" }])}
+        >
+          <Ionicons
+            name="map-outline"
+            size={40}
+            color={isWeb ? undefined : colors.primary}
+            style={isWeb ? webClassStyle("map-wait-glyph") : undefined}
+          />
+        </View>
+        <Text {...ui("map-title", [styles.mapTitle, { color: colors.text }])}>Waiting for GPS</Text>
+        <Text {...ui("map-subtitle", [styles.mapSubtitle, { color: colors.textSecondary }])}>
+          Add a cane or enable phone location to show the map.
         </Text>
-      )}
+      </View>
+    );
+  }
+
+  return (
+    <View {...ui("map-root", styles.root)}>
+      <OsmMapView
+        center={point}
+        caneLocation={caneLocation}
+        phoneLocation={phoneLocation}
+        mapType={mapType}
+        onMapPress={onMapPress}
+      />
+      {onToggleMapType ? (
+        <View {...ui("map-fab", styles.fab)}>
+          <GlowPressable onPress={onToggleMapType} className="map-fab-btn" style={styles.fabBtn}>
+            <Ionicons
+              name={mapType === "satellite" ? "map-outline" : "earth-outline"}
+              size={20}
+              color={isWeb ? undefined : colors.primary}
+              style={isWeb ? webClassStyle("map-layer-glyph") : undefined}
+            />
+          </GlowPressable>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   mapPlaceholder: {
     flex: 1,
     justifyContent: "center",
@@ -69,5 +100,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     paddingHorizontal: 20,
   },
-  coords: { fontSize: 13, marginTop: 16, fontWeight: "500" },
+  fab: {
+    position: "absolute",
+    right: 16,
+    bottom: 24,
+  },
+  fabBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

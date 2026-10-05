@@ -1,11 +1,18 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import { usePathname, useRouter } from 'expo-router';
+import { usePathname, useRootNavigationState, useRouter } from 'expo-router';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth } from '../firebase/firebaseConfig';
 import { useTheme } from './ThemeContext';
+import { ui } from '../utils/ui';
 
-const PUBLIC_PATHS = ['/', '/login', '/signup'];
+const PUBLIC_PATHS = [
+  '/',
+  '/login',
+  '/signup',
+  '/expo-auth-session',
+  '/oauthredirect',
+];
 
 type AuthContextValue = {
   user: User | null;
@@ -37,9 +44,11 @@ function AuthGate() {
   const { user, initializing } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const navigationState = useRootNavigationState();
 
   useEffect(() => {
     if (initializing) return;
+    if (!navigationState?.key) return;
 
     const isPublicRoute = PUBLIC_PATHS.includes(pathname);
 
@@ -48,7 +57,7 @@ function AuthGate() {
     } else if (!user && !isPublicRoute) {
       router.replace('/login');
     }
-  }, [user, initializing, pathname, router]);
+  }, [user, initializing, pathname, router, navigationState?.key]);
 
   return null;
 }
@@ -58,18 +67,16 @@ export function AuthBootstrap({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();
   const { colors } = theme;
 
-  if (initializing) {
-    return (
-      <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   return (
     <>
-      <AuthGate />
       {children}
+      {initializing ? (
+        <View {...ui('auth-boot', [styles.loading, { backgroundColor: colors.background }])}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <AuthGate />
+      )}
     </>
   );
 }
@@ -82,8 +89,9 @@ export function useAuth() {
 
 const styles = StyleSheet.create({
   loading: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 50,
   },
 });

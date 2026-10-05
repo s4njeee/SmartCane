@@ -3,6 +3,7 @@ import { StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import GlowPressable from './GlowPressable';
+import { isWeb, ui, webClassStyle } from '../../utils/ui';
 
 type Props = {
   compact?: boolean;
@@ -15,6 +16,7 @@ export default function ThemeToggle({ compact }: Props) {
   return (
     <GlowPressable
       onPress={toggleTheme}
+      className="theme-toggle"
       style={[
         styles.toggle,
         {
@@ -23,9 +25,14 @@ export default function ThemeToggle({ compact }: Props) {
         },
       ]}
     >
-      <Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={colors.primary} />
+      <Ionicons
+        name={isDark ? 'moon' : 'sunny'}
+        size={18}
+        color={isWeb ? undefined : colors.primary}
+        style={isWeb ? webClassStyle('theme-toggle-glyph') : undefined}
+      />
       {!compact ? (
-        <Text style={[styles.label, { color: colors.textSecondary }]}>
+        <Text {...ui('theme-toggle-label', [styles.label, { color: colors.textSecondary }])}>
           {isDark ? 'Dark' : 'Light'}
         </Text>
       ) : null}

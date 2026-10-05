@@ -8,7 +8,11 @@ Start-Sleep -Seconds 2
 
 Set-Location $PSScriptRoot\..
 
+# So UI Inspector "Open in editor" uses Cursor (requires `cursor` on PATH).
+$env:REACT_EDITOR = 'cursor'
+
 Write-Host "Starting Expo on http://localhost:8081 (LAN)..." -ForegroundColor Cyan
+Write-Host "REACT_EDITOR=$env:REACT_EDITOR" -ForegroundColor DarkGray
 Write-Host "If the phone still cannot connect, run: npm run start:tunnel" -ForegroundColor DarkYellow
 
 npx expo start --go --clear --lan --port 8081
