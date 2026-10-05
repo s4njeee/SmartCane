@@ -27,6 +27,7 @@ import { radius, spacing } from "../constants/theme";
 import { useTheme } from "../context/ThemeContext";
 import { saveUserProfile } from "../firebase/appData";
 import { auth, db } from "../firebase/firebaseConfig";
+import { colorId, cx, isWeb, ui, webClassStyle } from "../utils/ui";
 import {
   avatarBaseUrl,
   getImageUploadMeta,
@@ -36,7 +37,11 @@ import {
   uploadAvatarFile,
   uriToArrayBuffer,
 } from "../utils/uploadAvatar";
-import { colorId, cx, isWeb, ui, webClassStyle } from "../utils/ui";
+
+/** Web-only demo identity — does not write to Firebase / Auth. */
+const WEB_DEMO_PROFILE = isWeb
+  ? { name: "Dirk", email: "dirk@demo.local" }
+  : null;
 
 function initialsFromName(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -220,7 +225,10 @@ export default function Profile() {
           subtitle="Account & preferences"
         />
 
-        <GlassCard className="profile-card is-profile" style={styles.profileCard}>
+        <GlassCard
+          className="profile-card is-profile"
+          style={styles.profileCard}
+        >
           <Animated.View style={{ transform: [{ scale: avatarScale }] }}>
             <Pressable
               onPress={handleUploadAvatar}
@@ -289,22 +297,42 @@ export default function Profile() {
                     <Ionicons
                       name="camera"
                       size={15}
-                      color={isWeb ? undefined : '#fff'}
-                      style={isWeb ? webClassStyle('profile-camera-glyph') : undefined}
+                      color={isWeb ? undefined : "#fff"}
+                      style={
+                        isWeb
+                          ? webClassStyle("profile-camera-glyph")
+                          : undefined
+                      }
                     />
                   )}
                 </View>
               </View>
             </Pressable>
           </Animated.View>
-          <Text {...ui("profile-name", [styles.name, { color: colors.text }])}>{username}</Text>
-          <Text {...ui("profile-email", [styles.email, { color: colors.textSecondary }])}>
+          <Text {...ui("profile-name", [styles.name, { color: colors.text }])}>
+            {username}
+          </Text>
+          <Text
+            {...ui("profile-email", [
+              styles.email,
+              { color: colors.textSecondary },
+            ])}
+          >
             {user?.email}
           </Text>
         </GlassCard>
 
-        <SectionLabel className="section-label-row is-first is-account" style={styles.firstSection}>Account</SectionLabel>
-        <GlassCard elevated={false} className="profile-section-card is-account" style={styles.sectionCard}>
+        <SectionLabel
+          className="section-label-row is-first is-account"
+          style={styles.firstSection}
+        >
+          Account
+        </SectionLabel>
+        <GlassCard
+          elevated={false}
+          className="profile-section-card is-account"
+          style={styles.sectionCard}
+        >
           <MenuItem
             icon="person-outline"
             title="Edit Profile"
@@ -312,7 +340,10 @@ export default function Profile() {
             onPress={() => router.push("/editprofile")}
           />
           <View
-            {...ui(cx("profile-divider", colorId("account")), [styles.menuDivider, { backgroundColor: colors.border }])}
+            {...ui(cx("profile-divider", colorId("account")), [
+              styles.menuDivider,
+              { backgroundColor: colors.border },
+            ])}
           />
           <MenuItem
             icon="lock-closed-outline"
@@ -323,7 +354,11 @@ export default function Profile() {
         </GlassCard>
 
         <SectionLabel className="is-appearance">Appearance</SectionLabel>
-        <GlassCard elevated={false} className="profile-section-card is-appearance" style={styles.sectionCard}>
+        <GlassCard
+          elevated={false}
+          className="profile-section-card is-appearance"
+          style={styles.sectionCard}
+        >
           <View {...ui(cx("menu-row", colorId("dark")), styles.menuRow)}>
             <View {...ui(cx("menu-left", colorId("dark")), styles.menuLeft)}>
               <View
@@ -336,14 +371,28 @@ export default function Profile() {
                   name="moon-outline"
                   size={20}
                   color={isWeb ? undefined : colors.primary}
-                  style={isWeb ? webClassStyle(cx("menu-glyph", "is-dark")) : undefined}
+                  style={
+                    isWeb
+                      ? webClassStyle(cx("menu-glyph", "is-dark"))
+                      : undefined
+                  }
                 />
               </View>
               <View {...ui("menu-copy", styles.menuCopy)}>
-                <Text {...ui(cx("menu-text", colorId("dark")), [styles.menuText, { color: colors.text }])}>
+                <Text
+                  {...ui(cx("menu-text", colorId("dark")), [
+                    styles.menuText,
+                    { color: colors.text },
+                  ])}
+                >
                   Dark Mode
                 </Text>
-                <Text {...ui(cx("menu-sub", colorId("dark")), [styles.menuSub, { color: colors.textMuted }])}>
+                <Text
+                  {...ui(cx("menu-sub", colorId("dark")), [
+                    styles.menuSub,
+                    { color: colors.textMuted },
+                  ])}
+                >
                   {isDark ? "On" : "Off"}
                 </Text>
               </View>
@@ -359,7 +408,11 @@ export default function Profile() {
         </GlassCard>
 
         <SectionLabel className="is-support">Support</SectionLabel>
-        <GlassCard elevated={false} className="profile-section-card is-support" style={styles.sectionCard}>
+        <GlassCard
+          elevated={false}
+          className="profile-section-card is-support"
+          style={styles.sectionCard}
+        >
           <MenuItem
             icon="warning-outline"
             title="Report Problem"
@@ -419,29 +472,50 @@ function MenuItem({
               styles.menuRow,
               Platform.OS === "android"
                 ? { overflow: "hidden" }
-                : pressed && { opacity: 0.7, backgroundColor: colors.primary + "08" },
+                : pressed && {
+                    opacity: 0.7,
+                    backgroundColor: colors.primary + "08",
+                  },
             ],
           })}
       android_ripple={{ color: colors.primary + "18" }}
     >
       <View {...ui(cx("menu-left", colorId(variant)), styles.menuLeft)}>
         <View
-          {...ui(cx("menu-icon", `is-${variant}`), [styles.iconBox, { backgroundColor: colors.primary + "12" }])}
+          {...ui(cx("menu-icon", `is-${variant}`), [
+            styles.iconBox,
+            { backgroundColor: colors.primary + "12" },
+          ])}
         >
           <Ionicons
             name={icon}
             size={20}
             color={isWeb ? undefined : colors.primary}
-            style={isWeb ? webClassStyle(cx("menu-glyph", `is-${variant}`)) : undefined}
+            style={
+              isWeb
+                ? webClassStyle(cx("menu-glyph", `is-${variant}`))
+                : undefined
+            }
           />
         </View>
-        <Text {...ui(cx("menu-text", colorId(variant)), [styles.menuText, { color: colors.text }])}>{title}</Text>
+        <Text
+          {...ui(cx("menu-text", colorId(variant)), [
+            styles.menuText,
+            { color: colors.text },
+          ])}
+        >
+          {title}
+        </Text>
       </View>
       <Ionicons
         name="chevron-forward"
         size={18}
         color={isWeb ? undefined : colors.textMuted}
-        style={isWeb ? webClassStyle(cx("menu-chevron", colorId(variant))) : undefined}
+        style={
+          isWeb
+            ? webClassStyle(cx("menu-chevron", colorId(variant)))
+            : undefined
+        }
       />
     </Pressable>
   );

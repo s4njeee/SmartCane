@@ -2,7 +2,6 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import BottomTabBar, { type TabKey } from './BottomTabBar';
-import { ui } from '../../utils/ui';
 
 type Props = {
   visible: boolean;
@@ -58,7 +57,7 @@ export default function StatusTabOverlay({
   };
 
   return (
-    <View pointerEvents="box-none" {...ui('tab-overlay', styles.wrap)}>
+    <View pointerEvents="box-none" style={styles.wrap}>
       <BottomTabBar active="status" onPress={onPress} />
     </View>
   );
@@ -66,7 +65,11 @@ export default function StatusTabOverlay({
 
 const styles = StyleSheet.create({
   wrap: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
     zIndex: 400,
     elevation: 24,
   },

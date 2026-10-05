@@ -3,14 +3,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { DEMO_CANE_NAME } from "../../constants/demo";
 import { WHITE_MAP_STYLE } from "../../constants/mapStyles";
 import { platformDesign } from "../../constants/platformDesign";
-import { useNavigation } from "../../context/NavigationContext";
 import { useCaneStatus } from "../../context/CaneStatusContext";
+import { useNavigation } from "../../context/NavigationContext";
 import { useTheme } from "../../context/ThemeContext";
 import { formatDistance, haversineMeters } from "../../utils/geoDistance";
 import { tabBarClearance } from "../../utils/layoutInsets";
-import { elevationStyle } from "../../utils/platformStyle";
+import { shouldUseOsmMapFallback } from "../../utils/mapRuntime";
 import {
   durationFromDistance,
   fetchRoadRoute,
@@ -19,10 +20,10 @@ import {
   pathMidpoint,
   routeFetchKey,
 } from "../../utils/osrmRoute";
+import { elevationStyle } from "../../utils/platformStyle";
 import DirectionsSheet from "./DirectionsSheet";
 import GlowPressable from "./GlowPressable";
 import OsmMapView from "./OsmMapView";
-import { shouldUseOsmMapFallback } from "../../utils/mapRuntime";
 
 type RoutePoint = {
   latitude: number;
@@ -127,15 +128,15 @@ export default function CaneMap({
   const [mapHeading, setMapHeading] = useState(0);
   const useOsmMap = shouldUseOsmMapFallback();
 
-  const [roadPath, setRoadPath] = useState<RoutePoint[]>(
-    () => (savedRoutePoints.length > 2 ? savedRoutePoints : [])
+  const [roadPath, setRoadPath] = useState<RoutePoint[]>(() =>
+    savedRoutePoints.length > 2 ? savedRoutePoints : [],
   );
   roadPathRef.current = roadPath.length > 2 ? roadPath : savedRoutePoints;
-  const [roadDistance, setRoadDistance] = useState(
-    () => (routeDistanceMeters > 0 ? routeDistanceMeters : 0)
+  const [roadDistance, setRoadDistance] = useState(() =>
+    routeDistanceMeters > 0 ? routeDistanceMeters : 0,
   );
-  const [roadDuration, setRoadDuration] = useState(
-    () => (routeDurationSeconds > 0 ? routeDurationSeconds : 0)
+  const [roadDuration, setRoadDuration] = useState(() =>
+    routeDurationSeconds > 0 ? routeDurationSeconds : 0,
   );
   const [routing, setRouting] = useState(false);
   const [routeError, setRouteError] = useState(false);
@@ -154,8 +155,7 @@ export default function CaneMap({
     phoneLocation?.longitude,
   ]);
 
-  const displayPath =
-    savedRoutePoints.length > 2 ? savedRoutePoints : roadPath;
+  const displayPath = savedRoutePoints.length > 2 ? savedRoutePoints : roadPath;
 
   const displayDistance =
     showRoute && (roadDistance > 0 || routeDistanceMeters > 0)
@@ -170,7 +170,7 @@ export default function CaneMap({
   const etaMid = useMemo(() => pathMidpoint(displayPath), [displayPath]);
 
   useEffect(() => {
-    setDestinationName(caneName || "SmartCane");
+    setDestinationName(caneName || DEMO_CANE_NAME);
   }, [caneName, setDestinationName]);
 
   useEffect(() => {
@@ -183,8 +183,8 @@ export default function CaneMap({
       showRoute && roadDistance > 0 ? roadDistance : straightLineMeters,
       durationFromDistance(
         showRoute && roadDistance > 0 ? roadDistance : straightLineMeters,
-        travelMode
-      )
+        travelMode,
+      ),
     );
   }, [
     showRoute,
@@ -204,9 +204,12 @@ export default function CaneMap({
   const openCaneDirections = () => {
     closeStatus();
     ignoreMapPress.current = true;
-    setTimeout(() => {
-      ignoreMapPress.current = false;
-    }, Platform.OS === "android" ? 1200 : 600);
+    setTimeout(
+      () => {
+        ignoreMapPress.current = false;
+      },
+      Platform.OS === "android" ? 1200 : 600,
+    );
     if (bothReady) {
       setFollowDirection(true);
     }
@@ -252,7 +255,7 @@ export default function CaneMap({
         const result = await fetchRoadRoute(
           phoneLocation,
           caneLocation,
-          travelMode
+          travelMode,
         );
         if (cancelled) return;
         const points = result?.points ?? [];
@@ -264,7 +267,11 @@ export default function CaneMap({
           setRoadPath(points);
           setRoadDistance(result!.distanceMeters);
           setRoadDuration(result!.durationSeconds);
-          setSavedRoute(points, result!.distanceMeters, result!.durationSeconds);
+          setSavedRoute(
+            points,
+            result!.distanceMeters,
+            result!.durationSeconds,
+          );
           setRouteError(false);
         } else {
           lastRouteKey.current = fetchKey;
@@ -293,7 +300,7 @@ export default function CaneMap({
     setTracksViews(true);
     const timer = setTimeout(
       () => setTracksViews(false),
-      platformDesign.map.tracksViewChangesMs || 600
+      platformDesign.map.tracksViewChangesMs || 600,
     );
     return () => clearTimeout(timer);
   }, [showRoute]);
@@ -308,7 +315,7 @@ export default function CaneMap({
         latitudeDelta: DEFAULT_DELTA,
         longitudeDelta: DEFAULT_DELTA,
       },
-      400
+      400,
     );
   }, [!!focusPoint]);
 
@@ -339,7 +346,7 @@ export default function CaneMap({
       if (!camera || !mapRef.current) return;
       await mapRef.current.animateCamera(
         { ...camera, heading: 0, pitch: 0 },
-        { duration: 300 }
+        { duration: 300 },
       );
       setMapHeading(0);
     } catch {
@@ -349,7 +356,8 @@ export default function CaneMap({
 
   if (!focusPoint) return null;
 
-  const fabBottom = tabBarClearance(insets, 12) + platformDesign.map.fabExtraClearance;
+  const fabBottom =
+    tabBarClearance(insets, 12) + platformDesign.map.fabExtraClearance;
   // Keep legend on the same bottom line as the satellite / map FAB
   const legendBottom = fabBottom;
 
@@ -369,141 +377,141 @@ export default function CaneMap({
           onCanePress={openCaneDirections}
         />
       ) : (
-      <MapView
-        ref={(ref) => {
-          mapRef.current = ref;
-          onMapRef(ref);
-        }}
-        style={styles.map}
-        provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-        showsUserLocation={false}
-        showsMyLocationButton={false}
-        showsCompass={false}
-        showsBuildings
-        showsIndoors
-        rotateEnabled={!isStatusOpen}
-        pitchEnabled={!isStatusOpen}
-        scrollEnabled={!isStatusOpen}
-        zoomEnabled={!isStatusOpen}
-        zoomTapEnabled={!isStatusOpen}
-        zoomControlEnabled={false}
-        toolbarEnabled={false}
-        moveOnMarkerPress={false}
-        mapType={mapType}
-        customMapStyle={mapType === "standard" ? WHITE_MAP_STYLE : undefined}
-        userInterfaceStyle="light"
-        onPress={() => {
-          if (ignoreMapPress.current) return;
-          if (directionsOpen && !isNavigating) closeDirections();
-          onMapPress?.();
-        }}
-        onMarkerPress={(event) => {
-          const id = String(event.nativeEvent?.id ?? "");
-          if (id === "phone" || id === "eta") return;
-          if (id === "cane") {
-            openCaneDirections();
-            return;
-          }
-          const coord = event.nativeEvent?.coordinate;
-          if (!coord || !caneLocation) return;
-          const nearCane =
-            Math.abs(coord.latitude - caneLocation.latitude) < 0.00025 &&
-            Math.abs(coord.longitude - caneLocation.longitude) < 0.00025;
-          if (nearCane) openCaneDirections();
-        }}
-        onPanDrag={() => {
-          userPanning.current = true;
-        }}
-        onRegionChangeComplete={async () => {
-          try {
-            const camera = await mapRef.current?.getCamera();
-            if (camera?.heading != null) setMapHeading(camera.heading);
-          } catch {
-            /* ignore */
-          }
-        }}
-        initialRegion={{
-          latitude: focusPoint.latitude,
-          longitude: focusPoint.longitude,
-          latitudeDelta: DEFAULT_DELTA,
-          longitudeDelta: DEFAULT_DELTA,
-        }}
-      >
-        {/* Primary route */}
-        {showRoute && displayPath.length > 2 && (
-          <>
-            <Polyline
-              key={`route-outline-${displayPath.length}`}
-              coordinates={displayPath}
-              strokeWidth={Platform.OS === "android" ? 12 : 10}
-              strokeColor={ROUTE_OUTLINE}
-              geodesic={false}
-              tappable={false}
-              zIndex={1}
-              lineCap="round"
-              lineJoin="round"
-            />
-            <Polyline
-              key={`route-fill-${displayPath.length}`}
-              coordinates={displayPath}
-              strokeWidth={Platform.OS === "android" ? 8 : 6}
-              strokeColor={ROUTE_BLUE}
-              geodesic={false}
+        <MapView
+          ref={(ref) => {
+            mapRef.current = ref;
+            onMapRef(ref);
+          }}
+          style={styles.map}
+          provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+          showsUserLocation={false}
+          showsMyLocationButton={false}
+          showsCompass={false}
+          showsBuildings
+          showsIndoors
+          rotateEnabled={!isStatusOpen}
+          pitchEnabled={!isStatusOpen}
+          scrollEnabled={!isStatusOpen}
+          zoomEnabled={!isStatusOpen}
+          zoomTapEnabled={!isStatusOpen}
+          zoomControlEnabled={false}
+          toolbarEnabled={false}
+          moveOnMarkerPress={false}
+          mapType={mapType}
+          customMapStyle={mapType === "standard" ? WHITE_MAP_STYLE : undefined}
+          userInterfaceStyle="light"
+          onPress={() => {
+            if (ignoreMapPress.current) return;
+            if (directionsOpen && !isNavigating) closeDirections();
+            onMapPress?.();
+          }}
+          onMarkerPress={(event) => {
+            const id = String(event.nativeEvent?.id ?? "");
+            if (id === "phone" || id === "eta") return;
+            if (id === "cane") {
+              openCaneDirections();
+              return;
+            }
+            const coord = event.nativeEvent?.coordinate;
+            if (!coord || !caneLocation) return;
+            const nearCane =
+              Math.abs(coord.latitude - caneLocation.latitude) < 0.00025 &&
+              Math.abs(coord.longitude - caneLocation.longitude) < 0.00025;
+            if (nearCane) openCaneDirections();
+          }}
+          onPanDrag={() => {
+            userPanning.current = true;
+          }}
+          onRegionChangeComplete={async () => {
+            try {
+              const camera = await mapRef.current?.getCamera();
+              if (camera?.heading != null) setMapHeading(camera.heading);
+            } catch {
+              /* ignore */
+            }
+          }}
+          initialRegion={{
+            latitude: focusPoint.latitude,
+            longitude: focusPoint.longitude,
+            latitudeDelta: DEFAULT_DELTA,
+            longitudeDelta: DEFAULT_DELTA,
+          }}
+        >
+          {/* Primary route */}
+          {showRoute && displayPath.length > 2 && (
+            <>
+              <Polyline
+                key={`route-outline-${displayPath.length}`}
+                coordinates={displayPath}
+                strokeWidth={Platform.OS === "android" ? 12 : 10}
+                strokeColor={ROUTE_OUTLINE}
+                geodesic={false}
+                tappable={false}
+                zIndex={1}
+                lineCap="round"
+                lineJoin="round"
+              />
+              <Polyline
+                key={`route-fill-${displayPath.length}`}
+                coordinates={displayPath}
+                strokeWidth={Platform.OS === "android" ? 8 : 6}
+                strokeColor={ROUTE_BLUE}
+                geodesic={false}
+                tappable={false}
+                zIndex={2}
+                lineCap="round"
+                lineJoin="round"
+              />
+            </>
+          )}
+
+          {showRoute && etaMid && displayDistance > 0 && !routing && (
+            <Marker
+              identifier="eta"
+              coordinate={etaMid}
+              anchor={{ x: 0.5, y: 0.5 }}
+              tracksViewChanges={false}
+              zIndex={4}
+            >
+              <EtaBubble label={durationLabel} />
+            </Marker>
+          )}
+
+          {caneLocation && (
+            <Marker
+              identifier="cane" 
+              coordinate={caneLocation}
+              title={caneName || DEMO_CANE_NAME}
+              description="Tap for Directions"
+              anchor={{ x: 0.5, y: 0.5 }}
+              tracksViewChanges={tracksViews}
+              stopPropagation
+              tappable
+              onPress={(event) => {
+                event.stopPropagation?.();
+                openCaneDirections();
+              }}
+              zIndex={3}
+            >
+              <CaneBlueDot active={showRoute} />
+            </Marker>
+          )}
+
+          {phoneLocation && (
+            <Marker
+              identifier="phone"
+              coordinate={phoneLocation}
+              title="My Location"
+              description="Start"
+              anchor={{ x: 0.5, y: 1 }}
+              tracksViewChanges={tracksViews}
               tappable={false}
               zIndex={2}
-              lineCap="round"
-              lineJoin="round"
-            />
-          </>
-        )}
-
-        {showRoute && etaMid && displayDistance > 0 && !routing && (
-          <Marker
-            identifier="eta"
-            coordinate={etaMid}
-            anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
-            zIndex={4}
-          >
-            <EtaBubble label={durationLabel} />
-          </Marker>
-        )}
-
-        {caneLocation && (
-          <Marker
-            identifier="cane"
-            coordinate={caneLocation}
-            title={caneName || "SmartCane"}
-            description="Tap for Directions"
-            anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={tracksViews}
-            stopPropagation
-            tappable
-            onPress={(event) => {
-              event.stopPropagation?.();
-              openCaneDirections();
-            }}
-            zIndex={3}
-          >
-            <CaneBlueDot active={showRoute} />
-          </Marker>
-        )}
-
-        {phoneLocation && (
-          <Marker
-            identifier="phone"
-            coordinate={phoneLocation}
-            title="My Location"
-            description="Start"
-            anchor={{ x: 0.5, y: 1 }}
-            tracksViewChanges={tracksViews}
-            tappable={false}
-            zIndex={2}
-          >
-            <YouRedPin />
-          </Marker>
-        )}
-      </MapView>
+            >
+              <YouRedPin />
+            </Marker>
+          )}
+        </MapView>
       )}
 
       <DirectionsSheet
@@ -530,24 +538,52 @@ export default function CaneMap({
           <View style={styles.legendRow}>
             <View style={styles.legendItem}>
               <View style={styles.legendYou} />
-              <Text style={[styles.legendText, { color: colors.text }]}>You</Text>
+              <Text style={[styles.legendText, { color: colors.text }]}>
+                You
+              </Text>
             </View>
             <View style={styles.legendItem}>
               <View style={styles.legendCane} />
-              <Text style={[styles.legendText, { color: colors.text }]}>Cane</Text>
+              <Text style={[styles.legendText, { color: colors.text }]}>
+                Cane
+              </Text>
             </View>
           </View>
-          <Text style={[styles.legendHint, { color: colors.textMuted }]} numberOfLines={1}>
+          <Text
+            style={[styles.legendHint, { color: colors.textMuted }]}
+            numberOfLines={1}
+          >
             Tap blue cane for Directions
           </Text>
         </View>
       )}
 
       {!isStatusOpen && !directionsOpen && (
-      <View style={[styles.fabColumn, { bottom: fabBottom }]}>
-        {Math.abs(mapHeading) > 2 && (
+        <View style={[styles.fabColumn, { bottom: fabBottom }]}>
+          {Math.abs(mapHeading) > 2 && (
+            <GlowPressable
+              onPress={resetNorth}
+              glowColor={colors.primary}
+              style={[
+                styles.mapFloatingButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderRadius: 12,
+                  ...elevationStyle(2, colors.shadow),
+                },
+              ]}
+            >
+              <Ionicons
+                name="compass"
+                size={24}
+                color={colors.primary}
+                style={{ transform: [{ rotate: `${-mapHeading}deg` }] }}
+              />
+            </GlowPressable>
+          )}
           <GlowPressable
-            onPress={resetNorth}
+            onPress={onToggleMapType}
             glowColor={colors.primary}
             style={[
               styles.mapFloatingButton,
@@ -560,33 +596,12 @@ export default function CaneMap({
             ]}
           >
             <Ionicons
-              name="compass"
-              size={24}
+              name={mapType === "standard" ? "map" : "globe"}
+              size={22}
               color={colors.primary}
-              style={{ transform: [{ rotate: `${-mapHeading}deg` }] }}
             />
           </GlowPressable>
-        )}
-        <GlowPressable
-          onPress={onToggleMapType}
-          glowColor={colors.primary}
-          style={[
-            styles.mapFloatingButton,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderRadius: 12,
-              ...elevationStyle(2, colors.shadow),
-            },
-          ]}
-        >
-          <Ionicons
-            name={mapType === "standard" ? "map" : "globe"}
-            size={22}
-            color={colors.primary}
-          />
-        </GlowPressable>
-      </View>
+        </View>
       )}
     </>
   );

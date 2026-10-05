@@ -235,22 +235,60 @@ async function locateCssLine(entry) {
   }
 }
 
+async function locateTextLine(entry) {
+  const loc = parseSourceLocation(entry?.src || '');
+  const file = (loc?.file || '').replace(/\\/g, '/');
+  const text = entry?.locateText || entry?.text || '';
+  if (!text) return null;
+  const base = getDevServerUrl();
+  let qs = `text=${encodeURIComponent(text)}`;
+  if (file) qs += `&file=${encodeURIComponent(file)}`;
+  try {
+    const res = await fetch(`${base}__insp/locate?${qs}`);
+    if (!res.ok) return null;
+    const body = await res.json();
+    if (!body?.found && !body?.ok) return null;
+    const line = body.line || 1;
+    const column = body.column || 1;
+    const foundFile = body.file || file;
+    return {
+      ...entry,
+      src: `${foundFile}:${line}:${column}`,
+      srcLabel: lineLabel(foundFile, line, column),
+      resolvedLine: line,
+      resolvedColumn: column,
+      matched: body.matched || null,
+      locateText: text,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function enrichDescriptionColors(description) {
   if (!description) return description;
   const colors = description.colorEntries || description.colors || [];
-  if (!colors.length) return description;
-  const enriched = await Promise.all(
-    colors.map(async (c) => (await locateCssLine(c)) || {
-      ...c,
-      srcLabel: c.srcLabel && c.srcLabel !== 'colors' && c.srcLabel !== 'color' ? c.srcLabel : (c.role || shortFileLabel(c.src)),
-    }),
-  );
-  const textColorEntries = enriched.filter((c) => c.isTextColor);
+  const texts = description.textEntries || [];
+  const enrichedColors = colors.length
+    ? await Promise.all(
+        colors.map(async (c) => (await locateCssLine(c)) || {
+          ...c,
+          srcLabel: c.srcLabel && c.srcLabel !== 'colors' && c.srcLabel !== 'color' ? c.srcLabel : (c.role || shortFileLabel(c.src)),
+        }),
+      )
+    : colors;
+  const enrichedTexts = texts.length
+    ? await Promise.all(
+        texts.map(async (t) => (await locateTextLine(t)) || t),
+      )
+    : texts;
+  const textColorEntries = enrichedColors.filter((c) => c.isTextColor);
   return {
     ...description,
-    colorEntries: enriched,
-    colors: enriched,
+    colorEntries: enrichedColors,
+    colors: enrichedColors,
     textColorEntries,
+    textEntries: enrichedTexts,
   };
 }
 
@@ -261,16 +299,34 @@ function colorRowLabel(entry) {
   return `${role} · ${file}`;
 }
 
-function RowWithFile({ children, src, onOpen, label }) {
+function RowWithFile({ children, src, onOpen, label, pressable }) {
+  const open = () => {
+    if (typeof onOpen === 'function' && (src || pressable)) onOpen(src);
+  };
+  const rowStyle =
+    Platform.OS === 'web' && pressable
+      ? [styles.rowWithFile, styles.rowWithFileClickable]
+      : styles.rowWithFile;
+  const linkLabel = label || shortFileLabel(src) || 'open';
   return (
-    <View style={styles.rowWithFile}>
-      <View style={styles.rowWithFileMain}>{children}</View>
-      {src ? (
-        <FileLink src={src} onOpen={onOpen} label={label || shortFileLabel(src)} />
+    <Pressable
+      onPress={pressable ? open : undefined}
+      disabled={!pressable}
+      style={rowStyle}
+    >
+      <View style={styles.rowWithFileMain} pointerEvents={pressable ? 'none' : 'auto'}>
+        {children}
+      </View>
+      {pressable ? (
+        <Text style={styles.fileLinkText} pointerEvents="none">
+          {linkLabel}
+        </Text>
+      ) : src ? (
+        <FileLink src={src} onOpen={onOpen} label={linkLabel} />
       ) : (
         <Text style={styles.monoDim}>—</Text>
       )}
-    </View>
+    </Pressable>
   );
 }
 
@@ -451,6 +507,8 @@ function UiInspectorInner() {
     }
   }, []);
 
+  const openAtRef = useRef(null);
+
   const applySelection = useCallback(
     async (element) => {
       setSelection(element);
@@ -458,9 +516,26 @@ function UiInspectorInner() {
       setMinimized(false);
       const baseDescription = describeElement(element);
       setDescription(baseDescription);
+      const className = String(
+        baseDescription?.className || element?.props?.className || '',
+      );
+      const demoLabel =
+        /\b(profile-name|profile-email|hud-title|cane-name|dir-to)\b/.test(className);
       // Resolve exact index.css:line:col for every color row (bg / border / text).
       void enrichDescriptionColors(baseDescription).then((rich) => {
         if (rich) setDescription(rich);
+        if (!demoLabel) return;
+        const texts = rich?.textEntries || baseDescription?.textEntries || [];
+        const jump =
+          texts.find((t) => /constants\/demo\.ts/i.test(String(t.src || ''))) ||
+          texts[0];
+        if (!jump?.text && !jump?.locateText) return;
+        // #region agent log
+        fetch('http://127.0.0.1:7721/ingest/7b27707b-f678-425d-8402-d4da67f06182',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d610b9'},body:JSON.stringify({sessionId:'d610b9',hypothesisId:'H10',location:'UiInspector.jsx:autoDemoNav',message:'auto open demo label',data:{className,text:jump.locateText||jump.text,src:jump.src},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        openAtRef.current?.(jump.src || 'constants/demo.ts', {
+          text: jump.locateText || jump.text,
+        });
       });
       if (element?.src) {
         await loadSnippet(element.src);
@@ -542,18 +617,20 @@ function UiInspectorInner() {
 
   const openAt = useCallback(async (src, extra = {}) => {
     const loc = parseSourceLocation(src);
-    if (!loc) {
+    const text = extra.text || loc?.text || null;
+    if (!loc && !text) {
       setOpenError('Could not parse file:line from source');
       return;
     }
-    const file = String(loc.file).replace(/\\/g, '/');
-    const symbol = extra.symbol || loc.symbol || null;
-    const prop = extra.prop || loc.prop || null;
-    const theme = extra.theme || loc.theme || null;
-    const color = extra.color || loc.color || null;
-    const token = extra.token != null ? extra.token : loc.token;
+    const file = String(loc?.file || 'app').replace(/\\/g, '/');
+    const symbol = extra.symbol || loc?.symbol || null;
+    const prop = extra.prop || loc?.prop || null;
+    const theme = extra.theme || loc?.theme || null;
+    const color = extra.color || loc?.color || null;
+    const token = extra.token != null ? extra.token : loc?.token;
     const base = getDevServerUrl();
-    let qs = `file=${encodeURIComponent(file)}&line=${loc.line}&column=${loc.column || 1}`;
+    let qs = `file=${encodeURIComponent(file)}&line=${loc?.line || 1}&column=${loc?.column || 1}`;
+    if (text) qs += `&text=${encodeURIComponent(text)}`;
     if (symbol) qs += `&symbol=${encodeURIComponent(symbol)}`;
     if (prop) qs += `&prop=${encodeURIComponent(prop)}`;
     if (theme) qs += `&theme=${encodeURIComponent(theme)}`;
@@ -589,7 +666,7 @@ function UiInspectorInner() {
           lastError = `HTTP ${res.status}${detail}\n${openUrl}`;
           continue;
         }
-        const openedLine = body?.line || loc.line;
+        const openedLine = body?.line || loc?.line || 1;
         const openedFile = body?.file || file;
         setOpenOk(
           `Opened ${openedFile}:${openedLine}` +
@@ -602,6 +679,7 @@ function UiInspectorInner() {
     }
     setOpenError(lastError || `Failed to fetch\n${openUrl}`);
   }, []);
+  openAtRef.current = openAt;
 
   const openInEditor = useCallback(() => {
     // Prefer CSS when the picked node is styled from styles/index.css
@@ -1112,7 +1190,14 @@ function UiInspectorInner() {
                   <RowWithFile
                     key={`${entry.text}-${entry.src || ''}`}
                     src={entry.src}
-                    onOpen={openAt}
+                    pressable
+                    onOpen={(src) => {
+                      // #region agent log
+                      fetch('http://127.0.0.1:7721/ingest/7b27707b-f678-425d-8402-d4da67f06182',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d610b9'},body:JSON.stringify({sessionId:'d610b9',hypothesisId:'H9',location:'UiInspector.jsx:textClick',message:'text row clicked',data:{text:entry.text,src:entry.src||src,label:entry.srcLabel},timestamp:Date.now()})}).catch(()=>{});
+                      // #endregion
+                      openAt(src || entry.src || 'app', { text: entry.locateText || entry.text });
+                    }}
+                    label={entry.srcLabel || shortFileLabel(entry.src) || 'text'}
                   >
                     <Text style={styles.mono}>“{entry.text}”</Text>
                   </RowWithFile>
@@ -1369,6 +1454,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 8,
     marginBottom: 6,
+  },
+  rowWithFileClickable: {
+    cursor: 'pointer',
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   rowWithFileMain: {
     flex: 1,

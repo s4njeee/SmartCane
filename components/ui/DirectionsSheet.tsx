@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DEMO_CANE_NAME } from '../../constants/demo';
 import { platformDesign } from '../../constants/platformDesign';
 import { useNavigation, type TravelMode } from '../../context/NavigationContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -173,7 +174,7 @@ export default function DirectionsSheet({
               {...ui('dir-to', [styles.to, { color: colors.text }])}
               numberOfLines={1}
             >
-              {caneName || 'SmartCane'}
+              {caneName || DEMO_CANE_NAME}
             </Text>
           </View>
         </View>

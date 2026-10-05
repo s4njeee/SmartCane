@@ -1,5 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useNavigation } from "../../context/NavigationContext";
+import { DEMO_CANE_NAME } from "../../constants/demo";
 import { useTheme } from "../../context/ThemeContext";
 import { isWeb, ui, webClassStyle } from "../../utils/ui";
 import GlowPressable from "./GlowPressable";
@@ -26,10 +29,16 @@ export default function CaneMap({
   mapType = "standard",
   onToggleMapType,
   onMapPress,
+  caneName,
 }: Props) {
   const { theme } = useTheme();
   const { colors } = theme;
+  const { setDestinationName } = useNavigation();
   const point = caneLocation || phoneLocation || location;
+
+  useEffect(() => {
+    setDestinationName(caneName || DEMO_CANE_NAME);
+  }, [caneName, setDestinationName]);
 
   if (!point) {
     return (

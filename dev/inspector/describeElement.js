@@ -177,9 +177,6 @@ function extractText(props) {
     }
   };
   walk(props?.children);
-  if (typeof props?.accessibilityLabel === 'string' && props.accessibilityLabel.trim()) {
-    texts.push(props.accessibilityLabel.trim());
-  }
   return [...new Set(texts)].slice(0, 8);
 }
 
@@ -228,43 +225,55 @@ function textInsideDom(domNode) {
 }
 
 function buildTextEntries(element, fallbackSrc) {
-  const inside = textInsideDom(element?.domNode);
-  if (inside) {
-    // #region agent log
-    fetch('http://127.0.0.1:7721/ingest/7b27707b-f678-425d-8402-d4da67f06182',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d610b9'},body:JSON.stringify({sessionId:'d610b9',hypothesisId:'H6',location:'describeElement.js:textInsideDom',message:'text limited to selected box',data:{className:domClassNames(element.domNode).join(' '),texts:inside},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    return inside.map((text) => ({
-      text,
-      src: fallbackSrc || null,
-      srcLabel: shortSrcLabel(fallbackSrc),
-    }));
-  }
-
   const related = element?.related || [];
+  const inside = textInsideDom(element?.domNode);
+  // #region agent log
+  fetch('http://127.0.0.1:7721/ingest/7b27707b-f678-425d-8402-d4da67f06182',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d610b9'},body:JSON.stringify({sessionId:'d610b9',hypothesisId:'H9',location:'describeElement.js:buildTextEntries',message:'text entries source pick',data:{className:domClassNames(element?.domNode).join(' '),texts:inside||[],related:related.length},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+
   const entries = [];
   const seen = new Set();
+
+  const pushEntry = (text, src) => {
+    const value = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!value) return;
+    const key = value.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    entries.push({
+      text: value,
+      src: src || fallbackSrc || null,
+      srcLabel: shortSrcLabel(src || fallbackSrc),
+      locateText: value,
+    });
+  };
+
+  if (inside && inside.length) {
+    for (const text of inside) {
+      let matchedSrc = null;
+      for (const node of related) {
+        if (!nodeLooksLikeText(node)) continue;
+        const lines = extractText(node.props);
+        if (lines.some((line) => line.replace(/\s+/g, ' ').trim() === text)) {
+          matchedSrc = node.src || matchedSrc;
+          break;
+        }
+      }
+      pushEntry(text, matchedSrc || fallbackSrc);
+    }
+    return entries.slice(0, 12);
+  }
 
   for (const node of related) {
     if (!nodeLooksLikeText(node)) continue;
     for (const line of extractText(node.props)) {
-      const key = `${line}|${node.src}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      entries.push({
-        text: line,
-        src: node.src || fallbackSrc || null,
-        srcLabel: shortSrcLabel(node.src || fallbackSrc),
-      });
+      pushEntry(line, node.src || fallbackSrc);
     }
   }
 
   if (!entries.length) {
     for (const line of extractText(element?.props)) {
-      entries.push({
-        text: line,
-        src: fallbackSrc || null,
-        srcLabel: shortSrcLabel(fallbackSrc),
-      });
+      pushEntry(line, fallbackSrc);
     }
   }
   return entries.slice(0, 12);

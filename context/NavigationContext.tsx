@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { DEMO_CANE_NAME } from '../constants/demo';
 import { formatDistance } from '../utils/geoDistance';
 import {
   durationFromDistance,
@@ -73,7 +74,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const [followDirection, setFollowDirectionState] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [travelMode, setTravelMode] = useState<TravelMode>('driving');
-  const [destinationName, setDestinationName] = useState('SmartCane');
+  const [destinationName, setDestinationName] = useState(DEMO_CANE_NAME);
   const [routeDistanceMeters, setRouteDistanceMeters] = useState(0);
   const [routeDurationSeconds, setRouteDurationSeconds] = useState(0);
   const [goBannerExpanded, setGoBannerExpanded] = useState(true);

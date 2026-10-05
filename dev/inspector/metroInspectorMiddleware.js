@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { parse: urlParse } = require('url');
 const { locateCss, buildCssIndex } = require('./cssLocate');
+const { locateText } = require('./locateText');
 
 const CONTEXT_LINES = 12;
 
@@ -158,6 +159,29 @@ function createInspectorMiddleware(projectRoot) {
     }
 
     if (parsed.pathname === '/__insp/locate') {
+      const textQuery = parsed.query.text ? String(parsed.query.text) : '';
+      if (textQuery) {
+        const rawFile = parsed.query.file ? String(parsed.query.file) : '';
+        const rel = rawFile ? toProjectRelative(rawFile, root) : null;
+        const hit = locateText(root, textQuery, rel);
+        // #region agent log
+        fetch('http://127.0.0.1:7721/ingest/7b27707b-f678-425d-8402-d4da67f06182',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d610b9'},body:JSON.stringify({sessionId:'d610b9',hypothesisId:'H9',location:'metroInspectorMiddleware.js:locateText',message:'text locate result',data:{text:textQuery,file:rel,line:hit&&hit.line,matched:hit&&hit.matched,score:hit&&hit.score},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        res.statusCode = hit ? 200 : 404;
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'no-store');
+        res.end(
+          JSON.stringify({
+            ok: Boolean(hit),
+            file: hit?.file || rel || null,
+            line: hit?.line || 1,
+            column: hit?.column || 1,
+            matched: hit?.matched || null,
+            found: Boolean(hit),
+          }),
+        );
+        return;
+      }
       const rawFile = parsed.query.file || 'styles/index.css';
       const rel = toProjectRelative(rawFile, root);
       const found = rel ? resolveExistingFile(rel, root) : null;
@@ -215,6 +239,7 @@ function createInspectorMiddleware(projectRoot) {
 
     if (parsed.pathname === '/__insp/open') {
       const rawFile = parsed.query.file;
+      const textQuery = parsed.query.text ? String(parsed.query.text) : '';
       const rel = toProjectRelative(rawFile, root);
       let line = Math.max(1, parseInt(String(parsed.query.line || '1'), 10) || 1);
       let column = Math.max(1, parseInt(String(parsed.query.column || '1'), 10) || 1);
@@ -223,6 +248,57 @@ function createInspectorMiddleware(projectRoot) {
       const theme = parsed.query.theme ? String(parsed.query.theme) : 'light';
       const color = parsed.query.color ? String(parsed.query.color) : '';
       const tokenFlag = parsed.query.token != null ? String(parsed.query.token) : '';
+
+      if (textQuery) {
+        const hit = locateText(root, textQuery, rel);
+        // #region agent log
+        fetch('http://127.0.0.1:7721/ingest/7b27707b-f678-425d-8402-d4da67f06182',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d610b9'},body:JSON.stringify({sessionId:'d610b9',hypothesisId:'H9',location:'metroInspectorMiddleware.js:openText',message:'text open locate',data:{text:textQuery,file:rel,line:hit&&hit.line,matched:hit&&hit.matched,score:hit&&hit.score},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        if (!hit) {
+          res.statusCode = 404;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Text not found in source', text: textQuery }));
+          return;
+        }
+        const foundText = resolveExistingFile(hit.file, root);
+        if (!foundText) {
+          res.statusCode = 404;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'File not found', file: hit.file }));
+          return;
+        }
+        try {
+          const { launch, gotoArg } = launchEditor(
+            foundText.rel,
+            foundText.abs,
+            hit.line,
+            hit.column || 1,
+            root,
+          );
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              ok: true,
+              editor: launch.mode,
+              file: foundText.rel,
+              abs: foundText.abs,
+              gotoArg,
+              line: hit.line,
+              column: hit.column || 1,
+              matched: hit.matched,
+              text: textQuery,
+            }),
+          );
+        } catch (err) {
+          console.log(`[insp] open 500 ${err?.message || err}`);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: String(err?.message || err) }));
+        }
+        return;
+      }
+
       if (!rel) {
         res.statusCode = 400;
         res.setHeader('Content-Type', 'application/json');

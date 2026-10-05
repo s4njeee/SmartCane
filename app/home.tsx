@@ -13,6 +13,7 @@ import { useTheme } from '../context/ThemeContext';
 import { looksLikeCoordinates } from '../utils/geoPlace';
 import { mapBannerTop, tabBarClearance } from '../utils/layoutInsets';
 import { isWeb, ui, webClassStyle } from '../utils/ui';
+import { DEMO_CANE_NAME } from '../constants/demo';
 
 export default function HomeScreen() {
   const { theme } = useTheme();
@@ -38,6 +39,7 @@ export default function HomeScreen() {
   const hasMapTarget = Boolean(caneLocation || phoneLocation);
   const showStatusBanner =
     isHomeFocused && !isStatusOpen && !followDirection && !isNavigating;
+  const displayCaneName = isWeb ? DEMO_CANE_NAME : selectedCane?.username;
   const routeAddress = selectedCane?.routes[0]?.address;
   const placeLabel =
     caneAddress ||
@@ -93,7 +95,7 @@ export default function HomeScreen() {
               <LiveTrackingBanner
                 expanded={bannerExpanded}
                 onToggle={() => setBannerExpanded((prev) => !prev)}
-                caneName={selectedCane?.username}
+                caneName={displayCaneName}
                 deviceOnline={Boolean(selectedCane?.connected)}
                 eyeglassOnline={Boolean(selectedCane?.eyeglassConnected)}
                 isOffline={isOffline}
@@ -133,7 +135,7 @@ export default function HomeScreen() {
           caneLocation={caneLocation}
           phoneLocation={phoneLocation}
           mapType={mapType}
-          caneName={selectedCane?.username}
+          caneName={displayCaneName}
           onToggleMapType={() => {
             collapseBanner();
             setMapType(mapType === 'standard' ? 'satellite' : 'standard');
@@ -151,7 +153,7 @@ export default function HomeScreen() {
               <LiveTrackingBanner
                 expanded={bannerExpanded}
                 onToggle={() => setBannerExpanded((prev) => !prev)}
-                caneName={selectedCane?.username}
+                caneName={displayCaneName}
                 deviceOnline={Boolean(selectedCane?.connected)}
                 eyeglassOnline={Boolean(selectedCane?.eyeglassConnected)}
                 isOffline={isOffline}

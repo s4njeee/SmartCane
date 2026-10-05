@@ -3,6 +3,7 @@ import { usePathname, useSegments } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DEMO_CANE_NAME } from '../../constants/demo';
 import { useCaneStatus } from '../../context/CaneStatusContext';
 import { useNavigation } from '../../context/NavigationContext';
 import { mapBannerTop } from '../../utils/layoutInsets';
@@ -92,7 +93,7 @@ export default function GoNavigationBanner() {
             numberOfLines={1}
             maxFontSizeMultiplier={1.2}
           >
-            To {destinationName || 'SmartCane'}
+            To {destinationName || DEMO_CANE_NAME}
           </Text>
           <Text
             {...ui('hud-metric', [hudStyles.metric, { color: hud.metric }])}

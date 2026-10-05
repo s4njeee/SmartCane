@@ -2693,3 +2693,117 @@ body,
 [data-theme="dark"] .card.is-appearance {
   --card-is-appearance-border: 1px solid #334155;
 }
+
+.status-value-pill.is-cane-gps.is-bad {
+  --status-value-pill-is-cane-gps-is-bad-background-color: #dc262626;
+  background-color: var(--status-value-pill-is-cane-gps-is-bad-background-color);
+}
+[data-theme="dark"] .status-value-pill.is-cane-gps.is-bad {
+  --status-value-pill-is-cane-gps-is-bad-background-color: #ef444426;
+}
+
+.status-value.is-cane-gps.is-bad {
+  --status-value-is-cane-gps-is-bad-color: #dc2626;
+  color: var(--status-value-is-cane-gps-is-bad-color);
+}
+[data-theme="dark"] .status-value.is-cane-gps.is-bad {
+  --status-value-is-cane-gps-is-bad-color: #ef4444;
+}
+
+.status-row-label.is-cane-battery {
+  --status-row-label-is-cane-battery-color: #64748b;
+  color: var(--status-row-label-is-cane-battery-color);
+}
+[data-theme="dark"] .status-row-label.is-cane-battery {
+  --status-row-label-is-cane-battery-color: #94a3b8;
+}
+
+.alert-user.is-rwuyfyl1wybn25gycbqz {
+  --alert-user-is-rwuyfyl1wybn25gycbqz-color: #090e18;
+  color: var(--alert-user-is-rwuyfyl1wybn25gycbqz-color);
+}
+[data-theme="dark"] .alert-user.is-rwuyfyl1wybn25gycbqz {
+  --alert-user-is-rwuyfyl1wybn25gycbqz-color: #f8fafc;
+}
+
+.menu-text.is-edit {
+  --menu-text-is-edit-color: #090e18;
+  color: var(--menu-text-is-edit-color);
+}
+[data-theme="dark"] .menu-text.is-edit {
+  --menu-text-is-edit-color: #f8fafc;
+}
+
+.card.is-profile {
+  --card-is-profile-background-color: #ffffff;
+  background-color: var(--card-is-profile-background-color);
+}
+[data-theme="dark"] .card.is-profile {
+  --card-is-profile-background-color: #1e293b;
+}
+
+.card.is-profile {
+  --card-is-profile-border: 1px solid #e2e8f0;
+  border: var(--card-is-profile-border);
+}
+[data-theme="dark"] .card.is-profile {
+  --card-is-profile-border: 1px solid #334155;
+}
+
+.btn.is-logout {
+  --btn-is-logout-background-color: #dc2626;
+  background-color: var(--btn-is-logout-background-color);
+}
+
+.btn.is-logout {
+  --btn-is-logout-border-color: #dc2626;
+  border-color: var(--btn-is-logout-border-color);
+}
+
+.card.is-profile {
+  --card-is-profile-border: 1px solid #e2e8f0;
+  border: var(--card-is-profile-border);
+}
+[data-theme="dark"] .card.is-profile {
+  --card-is-profile-border: 1px solid #334155;
+}
+
+.section-label.is-account {
+  --section-label-is-account-color: #94a3b8;
+  color: var(--section-label-is-account-color);
+}
+[data-theme="dark"] .section-label.is-account {
+  --section-label-is-account-color: #64748b;
+}
+
+.card.is-account {
+  --card-is-account-background-color: #ffffff;
+  background-color: var(--card-is-account-background-color);
+}
+[data-theme="dark"] .card.is-account {
+  --card-is-account-background-color: #1e293b;
+}
+
+.card.is-account {
+  --card-is-account-border: 1px solid #e2e8f0;
+  border: var(--card-is-account-border);
+}
+[data-theme="dark"] .card.is-account {
+  --card-is-account-border: 1px solid #334155;
+}
+
+.card.is-profile {
+  --card-is-profile-border: 1px solid #e2e8f0;
+  border: var(--card-is-profile-border);
+}
+[data-theme="dark"] .card.is-profile {
+  --card-is-profile-border: 1px solid #334155;
+}
+
+.card.is-account {
+  --card-is-account-border: 1px solid #e2e8f0;
+  border: var(--card-is-account-border);
+}
+[data-theme="dark"] .card.is-account {
+  --card-is-account-border: 1px solid #334155;
+}
